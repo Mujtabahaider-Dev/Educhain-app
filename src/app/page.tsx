@@ -1,69 +1,212 @@
-import Image from "next/image";
+"use client";
+
+import React, { useState, useMemo, useEffect } from "react";
+import { Navbar } from "@/components/Navbar";
+import { StageCard } from "@/components/StageCard";
+import { QuizModal } from "@/components/QuizModal";
+import { MistakeForge } from "@/components/MistakeForge";
+import { Leaderboard } from "@/components/Leaderboard";
+import { AnalyticsView } from "@/components/AnalyticsView";
+import { ProfileModal } from "@/components/ProfileModal";
+import { HowItWorksBanner } from "@/components/HowItWorksBanner";
+import { NextQuestHero } from "@/components/NextQuestHero";
+import { useEduStore } from "@/store/useEduStore";
+import { STAGES_DATA } from "@/data/curriculum";
+import { Stage } from "@/types/curriculum";
+import { GRADE_SHORT_LABELS, SUBJECT_METADATA } from "@/data/constants";
+import { sound } from "@/lib/audio";
+import { Layers, Sparkles } from "lucide-react";
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<string>("map");
+  const [selectedSubject, setSelectedSubject] = useState<string>("all");
+  const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
+
+  const {
+    grade,
+    completedStages,
+    unlockedStages,
+    bestScores,
+    subjectProgress,
+    settings,
+  } = useEduStore();
+
+  // Ensure HTML has correct class on mount based on store
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      if (settings.theme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+  }, [settings.theme]);
+
+  // Filter stages by Grade and Subject
+  const filteredStages = useMemo(() => {
+    return STAGES_DATA.filter((stage) => {
+      const matchesGrade = stage.grade === grade || (grade === "grade_9" && stage.grade === "grade_9");
+      const matchesSubject = selectedSubject === "all" || stage.subject === selectedSubject;
+      return matchesGrade && matchesSubject;
+    });
+  }, [grade, selectedSubject]);
+
+  const handleNextStage = () => {
+    if (!selectedStage || !selectedStage.subject) return;
+    const currentSubjectStages = STAGES_DATA.filter((s) => s.subject === selectedStage.subject);
+    const nextStage = currentSubjectStages.find(
+      (s) => s.subjectStageNumber && selectedStage.subjectStageNumber && s.subjectStageNumber === selectedStage.subjectStageNumber + 1
+    );
+
+    if (nextStage) {
+      setSelectedStage(nextStage);
+    } else {
+      setSelectedStage(null);
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+    <div className="min-h-screen bg-white dark:bg-black text-[#111827] dark:text-[#ededed] flex flex-col vercel-grid relative selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
+      
+      {/* Top subtle glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 vercel-glow pointer-events-none -z-10" />
+
+      {/* Global Navbar */}
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onOpenProfile={() => setIsProfileOpen(true)}
+      />
+
+      {/* Main Content Area */}
+      <main className="flex-grow">
+        
+        {/* ======================================================== */}
+        {/* TAB 1: CURRICULUM CHAIN MAP */}
+        {/* ======================================================== */}
+        {activeTab === "map" && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 animate-in fade-in duration-300">
+            
+            {/* 1. Quick Onboarding 3-Step Banner (Dismissible) */}
+            <HowItWorksBanner />
+
+            {/* 2. Hero Next Recommended Quest & Subject Hubs */}
+            <NextQuestHero
+              stages={STAGES_DATA.filter((s) => s.grade === grade || (grade === "grade_9" && s.grade === "grade_9"))}
+              selectedSubject={selectedSubject}
+              onSelectSubject={(sub) => setSelectedSubject(sub)}
+              onStartStage={(stage) => setSelectedStage(stage)}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+            {/* 3. Stage Cards Section Header */}
+            <div className="flex items-center justify-between mb-4 pt-4 border-t border-neutral-200 dark:border-white/[0.08]">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <span>
+                    {selectedSubject === "all"
+                      ? "All Learning Stages"
+                      : `${SUBJECT_METADATA[selectedSubject as keyof typeof SUBJECT_METADATA]?.name || "Subject"} Chain`}
+                  </span>
+                  <span className="text-xs font-mono font-normal text-neutral-500 dark:text-neutral-400">
+                    ({filteredStages.length} Stages)
+                  </span>
+                </h2>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {selectedSubject === "all"
+                    ? "Complete stages sequentially to unlock the next link in your learning chain."
+                    : `Follow this track from Stage 1 to Master ${SUBJECT_METADATA[selectedSubject as keyof typeof SUBJECT_METADATA]?.name}.`}
+                </p>
+              </div>
+
+              {selectedSubject !== "all" && (
+                <button
+                  onClick={() => {
+                    sound.playClick();
+                    setSelectedSubject("all");
+                  }}
+                  className="text-xs font-mono text-neutral-500 hover:text-neutral-900 dark:hover:text-white underline underline-offset-4"
+                >
+                  Clear Filter
+                </button>
+              )}
+            </div>
+
+            {/* 4. Stages Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredStages.map((stage) => {
+                const subProgress = (stage.subject ? subjectProgress[stage.subject] : null) || {
+                  unlockedStages: [],
+                  completedStages: [],
+                  bestScores: {},
+                };
+
+                const isUnlocked = subProgress.unlockedStages.includes(stage.id) || unlockedStages.includes(stage.id);
+                const isCompleted = subProgress.completedStages.includes(stage.id) || completedStages.includes(stage.id);
+                const stageBestScore = subProgress.bestScores[stage.id] || bestScores[stage.id] || 0;
+
+                return (
+                  <StageCard
+                    key={stage.id}
+                    stage={stage}
+                    isUnlocked={isUnlocked}
+                    isCompleted={isCompleted}
+                    bestScore={stageBestScore}
+                    onSelect={(s) => setSelectedStage(s)}
+                  />
+                );
+              })}
+            </div>
+
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 2: MISTAKE FORGE */}
+        {/* ======================================================== */}
+        {activeTab === "forge" && <MistakeForge />}
+
+        {/* ======================================================== */}
+        {/* TAB 3: LEADERBOARD */}
+        {/* ======================================================== */}
+        {activeTab === "leaderboard" && <Leaderboard />}
+
+        {/* ======================================================== */}
+        {/* TAB 4: ANALYTICS */}
+        {/* ======================================================== */}
+        {activeTab === "analytics" && <AnalyticsView />}
+
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-neutral-200 dark:border-white/[0.08] py-8 bg-neutral-50 dark:bg-black/90 text-center text-xs text-neutral-500 font-mono transition-colors duration-200">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span>EduChain v2.0 • Easy Student Experience</span>
+            <span>•</span>
+            <span className="text-emerald-600 dark:text-emerald-400">Next.js 15 + Supabase</span>
+          </div>
+
+          <div>
+            Built with Vercel UI Aesthetics (Light / Dark Mode • Geist Font)
+          </div>
+        </div>
+      </footer>
+
+      {/* Active Quiz Modal */}
+      {selectedStage && (
+        <QuizModal
+          stage={selectedStage}
+          onClose={() => setSelectedStage(null)}
+          onNextStage={handleNextStage}
+        />
+      )}
+
+      {/* Profile & Settings Modal */}
+      {isProfileOpen && (
+        <ProfileModal onClose={() => setIsProfileOpen(false)} />
+      )}
+
     </div>
   );
 }
