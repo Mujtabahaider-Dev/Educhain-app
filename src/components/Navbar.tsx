@@ -19,7 +19,9 @@ import {
   BarChart3,
   Trophy,
   Sun,
-  Moon
+  Moon,
+  Globe,
+  LogIn
 } from "lucide-react";
 
 interface NavbarProps {
@@ -27,12 +29,16 @@ interface NavbarProps {
   setActiveTab: (tab: string) => void;
   onOpenSettings?: () => void;
   onOpenProfile?: () => void;
+  onOpenLanding?: () => void;
+  onOpenAuth?: (mode?: "signin" | "signup") => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   onOpenProfile,
+  onOpenLanding,
+  onOpenAuth,
 }) => {
   const { xp, currentStreak, settings, updateSettings, toggleTheme, mistakes, name, avatar } = useEduStore();
   const [syncing, setSyncing] = useState(false);
@@ -74,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => { setActiveTab("map"); sound.playClick(); }}
             className="flex items-center gap-2.5 text-left focus:outline-none group"
           >
-            <div className="w-8 h-8 rounded-lg bg-black dark:bg-gradient-to-br dark:from-white dark:via-[#ededed] dark:to-neutral-400 flex items-center justify-center text-white dark:text-black font-black text-sm shadow-[0_2px_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_15px_rgba(255,255,255,0.2)] group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-black text-sm shadow-sm group-hover:scale-105 transition-transform">
               ⛓️
             </div>
             <div className="flex flex-col">
@@ -125,8 +131,19 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right Status / Scholar Stats */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           
+          {/* Landing Page Shortcut */}
+          {onOpenLanding && (
+            <button
+              onClick={() => { sound.playClick(); onOpenLanding(); }}
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>Landing Page</span>
+            </button>
+          )}
+
           {/* Cloud Status Pill */}
           <button
             onClick={handleSimulateSync}
@@ -178,6 +195,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             {settings.soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-neutral-400 dark:text-neutral-600" />}
           </button>
+
+          {/* Auth Button */}
+          {onOpenAuth && (
+            <button
+              onClick={() => { sound.playClick(); onOpenAuth("signin"); }}
+              className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Login</span>
+            </button>
+          )}
 
           {/* Scholar Profile / Avatar */}
           <button
