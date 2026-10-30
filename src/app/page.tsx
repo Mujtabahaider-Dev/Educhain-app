@@ -14,7 +14,8 @@ import { HowItWorksBanner } from "@/components/HowItWorksBanner";
 import { NextQuestHero } from "@/components/NextQuestHero";
 import { useEduStore } from "@/store/useEduStore";
 import { STAGES_DATA } from "@/data/curriculum";
-import { Stage } from "@/types/curriculum";
+import { supabase } from "@/lib/supabase/client";
+import { GradeType, Stage } from "@/types/curriculum";
 import { GRADE_SHORT_LABELS, SUBJECT_METADATA } from "@/data/constants";
 import { sound } from "@/lib/audio";
 import { Layers } from "lucide-react";
@@ -35,7 +36,35 @@ export default function Home() {
     bestScores,
     subjectProgress,
     settings,
+    setProfile,
   } = useEduStore();
+
+  // Listen for Supabase Auth state changes (e.g. Email confirmation or session restore)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const meta = session.user.user_metadata || {};
+        if (meta.name || meta.grade) {
+          setProfile(meta.name || "Scholar", meta.avatar || "🧠", (meta.grade as GradeType) || "grade_9");
+        }
+        setViewMode("app");
+      }
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const meta = session.user.user_metadata || {};
+        if (meta.name || meta.grade) {
+          setProfile(meta.name || "Scholar", meta.avatar || "🧠", (meta.grade as GradeType) || "grade_9");
+        }
+        setViewMode("app");
+      }
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, [setProfile]);
 
   // Ensure HTML has correct class on mount based on store
   useEffect(() => {

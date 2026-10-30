@@ -104,10 +104,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(true);
 
     try {
+      const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}` : undefined;
+
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password: password.trim(),
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             name: name.trim() || "Scholar",
             avatar,
