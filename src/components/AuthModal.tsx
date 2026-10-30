@@ -6,7 +6,7 @@ import { useEduStore } from "@/store/useEduStore";
 import { GradeType } from "@/types/curriculum";
 import { GRADE_LABELS } from "@/data/constants";
 import { sound } from "@/lib/audio";
-import { X, Lock, Mail, User, Sparkles, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, Lock, Mail, User, Sparkles, ArrowRight, CheckCircle2, AlertCircle, MailCheck } from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -32,6 +32,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState<string | null>(null);
 
   const { setProfile } = useEduStore();
 
@@ -124,12 +125,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         sound.playIncorrect();
       } else {
         sound.playUnlock();
+
+        // If Supabase requires email verification (session is null or identities exist)
+        if (!data.session) {
+          setPendingConfirmationEmail(email.trim());
+          return;
+        }
+
+        // Otherwise if auto-confirmed
         setSuccessMsg("Account created successfully!");
-        
-        // Save to local profile
         setProfile(name.trim() || email.split("@")[0] || "Scholar", avatar, grade);
 
-        // Try inserting into profiles table
         if (data.user) {
           try {
             await supabase.from("profiles").upsert({
@@ -172,46 +178,95 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <X className="w-5 h-5" />
         </button>
 
-        {/* Brand Icon & Heading */}
-        <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xl mb-3 shadow-md">
-            ⛓️
-          </div>
-          <h2 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
-            {mode === "signin" ? "Welcome Back to EduChain" : "Create Your Scholar Account"}
-          </h2>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 max-w-xs">
-            {mode === "signin"
-              ? "Sign in to sync your quiz progress, badges, and rankings across devices."
-              : "Join the learning chain, track your accuracy, and conquer your curriculum."}
-          </p>
-        </div>
+        {/* ========================================================= */}
+        {/* VIEW: EMAIL CONFIRMATION REQUIRED SCREEN */}
+        {/* ========================================================= */}
+        {pendingConfirmationEmail ? (
+          <div className="flex flex-col items-center text-center py-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-3xl mb-4 shadow-sm">
+              <MailCheck className="w-8 h-8" />
+            </div>
 
-        {/* Tab Switcher: Sign In vs Sign Up */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200/60 dark:border-white/5 mb-6">
-          <button
-            type="button"
-            onClick={() => { setMode("signin"); setErrorMsg(null); setSuccessMsg(null); sound.playClick(); }}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              mode === "signin"
-                ? "bg-white dark:bg-white/15 text-neutral-900 dark:text-white shadow-sm"
-                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMode("signup"); setErrorMsg(null); setSuccessMsg(null); sound.playClick(); }}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              mode === "signup"
-                ? "bg-white dark:bg-white/15 text-neutral-900 dark:text-white shadow-sm"
-                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-            }`}
-          >
-            Create Account
-          </button>
-        </div>
+            <h2 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white mb-2">
+              Check Your Email!
+            </h2>
+
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-sm mb-4">
+              We sent a verification link to:
+              <span className="block font-mono font-semibold text-neutral-900 dark:text-white mt-1 break-all bg-neutral-100 dark:bg-white/[0.04] p-2 rounded-lg border border-neutral-200 dark:border-white/5">
+                {pendingConfirmationEmail}
+              </span>
+            </p>
+
+            <div className="p-3.5 rounded-xl bg-sky-50 dark:bg-sky-500/10 border border-sky-500/20 text-xs text-sky-800 dark:text-sky-300 text-left mb-6 leading-relaxed">
+              👉 Click the <strong>confirmation link in your inbox</strong> to activate your scholar account and immediately start learning!
+            </div>
+
+            <div className="flex flex-col gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingConfirmationEmail(null);
+                  setMode("signin");
+                  sound.playClick();
+                }}
+                className="w-full btn-vercel-primary py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
+              >
+                <span>Back to Sign In</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleGuestContinue}
+                className="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white py-1 transition-colors"
+              >
+                Explore as Guest meanwhile
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Brand Icon & Heading */}
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="w-12 h-12 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center text-xl mb-3 shadow-md">
+                ⛓️
+              </div>
+              <h2 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                {mode === "signin" ? "Welcome Back to EduChain" : "Create Your Scholar Account"}
+              </h2>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 max-w-xs">
+                {mode === "signin"
+                  ? "Sign in to sync your quiz progress, badges, and rankings across devices."
+                  : "Join the learning chain, track your accuracy, and conquer your curriculum."}
+              </p>
+            </div>
+
+            {/* Tab Switcher: Sign In vs Sign Up */}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200/60 dark:border-white/5 mb-6">
+              <button
+                type="button"
+                onClick={() => { setMode("signin"); setErrorMsg(null); setSuccessMsg(null); sound.playClick(); }}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  mode === "signin"
+                    ? "bg-white dark:bg-white/15 text-neutral-900 dark:text-white shadow-sm"
+                    : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode("signup"); setErrorMsg(null); setSuccessMsg(null); sound.playClick(); }}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  mode === "signup"
+                    ? "bg-white dark:bg-white/15 text-neutral-900 dark:text-white shadow-sm"
+                    : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                }`}
+              >
+                Create Account
+              </button>
+            </div>
 
         {/* Status Alerts */}
         {errorMsg && (
@@ -392,6 +447,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             Continue as Guest / Evaluator
           </button>
         </div>
+        </>
+      )}
 
       </div>
     </div>

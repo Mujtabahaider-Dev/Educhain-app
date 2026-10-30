@@ -13,6 +13,7 @@ interface EduStoreState extends UserState {
   
   // Actions
   setProfile: (name: string, avatar: string, grade: GradeType) => void;
+  signOut: () => void;
   updateSettings: (settings: Partial<UserState["settings"]>) => void;
   addXp: (amount: number) => void;
   recordQuizAttempt: (attempt: {
@@ -78,6 +79,15 @@ export const useEduStore = create<EduStoreState>()(
 
       setProfile: (name, avatar, grade) => {
         set({ name, avatar, grade });
+      },
+
+      signOut: () => {
+        set({
+          id: null,
+          name: "Scholar",
+          avatar: "🧠",
+          grade: "grade_9",
+        });
       },
 
       toggleTheme: () => {

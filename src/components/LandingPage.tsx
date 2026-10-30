@@ -19,8 +19,10 @@ import {
   Flame, 
   Clock,
   Layers,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
 
 interface LandingPageProps {
   onEnterApp: () => void;
@@ -31,9 +33,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onEnterApp,
   onOpenAuth,
 }) => {
-  const { settings, toggleTheme } = useEduStore();
+  const { settings, toggleTheme, signOut } = useEduStore();
   const [demoSelected, setDemoSelected] = useState<number | null>(null);
+  const [hasSession, setHasSession] = useState(false);
   const isDark = settings.theme === "dark";
+
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setHasSession(Boolean(session?.user));
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setHasSession(Boolean(session?.user));
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
 
   const handleLaunch = () => {
     sound.playClick();
@@ -43,6 +60,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const handleAuth = (mode: "signin" | "signup") => {
     sound.playClick();
     onOpenAuth(mode);
+  };
+
+  const handleSignOut = async () => {
+    sound.playClick();
+    await supabase.auth.signOut();
+    signOut();
+    setHasSession(false);
   };
 
   return (
@@ -88,12 +112,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-neutral-600" />}
             </button>
 
-            <button
-              onClick={() => handleAuth("signin")}
-              className="text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white px-3 py-1.5 rounded-lg transition-colors"
-            >
-              Sign In
-            </button>
+            {hasSession ? (
+              <button
+                onClick={handleSignOut}
+                className="text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 px-3 py-1.5 rounded-lg border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 transition-colors flex items-center gap-1.5"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => handleAuth("signin")}
+                className="text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Sign In
+              </button>
+            )}
 
             <button
               onClick={handleLaunch}

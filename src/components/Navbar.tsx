@@ -21,8 +21,10 @@ import {
   Sun,
   Moon,
   Globe,
-  LogIn
+  LogIn,
+  LogOut
 } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
 
 interface NavbarProps {
   activeTab: string;
@@ -40,8 +42,30 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenLanding,
   onOpenAuth,
 }) => {
-  const { xp, currentStreak, settings, updateSettings, toggleTheme, mistakes, name, avatar } = useEduStore();
+  const { xp, currentStreak, settings, updateSettings, toggleTheme, mistakes, name, avatar, signOut } = useEduStore();
   const [syncing, setSyncing] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setHasSession(Boolean(session?.user));
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setHasSession(Boolean(session?.user));
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    sound.playClick();
+    await supabase.auth.signOut();
+    signOut();
+    setHasSession(false);
+  };
 
   // Compute current rank
   const currentRank = RANKS.slice().reverse().find((r) => xp >= r.minXp) || RANKS[0];
@@ -196,15 +220,26 @@ export const Navbar: React.FC<NavbarProps> = ({
             {settings.soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-neutral-400 dark:text-neutral-600" />}
           </button>
 
-          {/* Auth Button */}
-          {onOpenAuth && (
+          {/* Auth Button: Login vs Sign Out */}
+          {hasSession ? (
             <button
-              onClick={() => { sound.playClick(); onOpenAuth("signin"); }}
-              className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
+              onClick={handleSignOut}
+              title="Sign Out of Supabase"
+              className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-rose-600 dark:text-rose-400 border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 transition-colors"
             >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Login</span>
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
             </button>
+          ) : (
+            onOpenAuth && (
+              <button
+                onClick={() => { sound.playClick(); onOpenAuth("signin"); }}
+                className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Login</span>
+              </button>
+            )
           )}
 
           {/* Scholar Profile / Avatar */}
