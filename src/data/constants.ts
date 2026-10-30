@@ -1,5 +1,5 @@
 import { ScholarRank, Achievement, LeaderboardScholar } from "@/types/user";
-import { GradeType, SubjectType } from "@/types/curriculum";
+import { GradeType, SubjectType, StreamDomain, StreamDomainId } from "@/types/curriculum";
 
 export const RANKS: ScholarRank[] = [
   { level: 1, name: "Novice", minXp: 0, maxXp: 499, stages: "1–6", icon: "🌱" },
@@ -23,6 +23,104 @@ export const GRADE_SHORT_LABELS: Record<GradeType, string> = {
   grade_12: "Grade 12",
 };
 
+export const SUBJECT_TO_STREAM: Record<SubjectType, StreamDomainId> = {
+  science: "stem_science",
+  computer_science: "stem_science",
+  mathematics: "mathematics_stream",
+  english: "humanities_languages",
+};
+
+export const STREAM_DOMAINS: StreamDomain[] = [
+  {
+    id: "stem_science",
+    name: "Science & Technology",
+    shortName: "Science & CS",
+    icon: "🔬",
+    description: "Computing architecture, algorithmic logic, physics, chemistry & cell biology",
+    color: "#34d399",
+    borderColor: "rgba(52, 211, 153, 0.3)",
+    badgeBg: "rgba(52, 211, 153, 0.1)",
+    subCategories: [
+      {
+        subjectId: "computer_science",
+        name: "Computer Science",
+        shortName: "Computer Science",
+        icon: "💻",
+        description: "Hardware Architecture, Binary Logic, Algorithms & Programming in C",
+        primaryTopics: [
+          "Hardware & Architecture",
+          "Binary Logic & Digital Gates",
+          "Algorithms & Flowcharts",
+          "Programming & Data Structures"
+        ],
+      },
+      {
+        subjectId: "science",
+        name: "Natural Sciences",
+        shortName: "Physics & Chemistry",
+        icon: "🧬",
+        description: "Kinematics, Atomic Structure, Chemical Bonding & Cell Biology",
+        primaryTopics: [
+          "Mechanics & Kinematics",
+          "Atomic Structure & Periodic Table",
+          "Cell Biology & Biomolecules",
+          "Physical Quantities & Measurement"
+        ],
+      },
+    ],
+  },
+  {
+    id: "mathematics_stream",
+    name: "Mathematics & Analytics",
+    shortName: "Mathematics",
+    icon: "📐",
+    description: "Linear algebra, matrix operations, logarithms, radicals & geometry",
+    color: "#38bdf8",
+    borderColor: "rgba(56, 189, 248, 0.3)",
+    badgeBg: "rgba(56, 189, 248, 0.1)",
+    subCategories: [
+      {
+        subjectId: "mathematics",
+        name: "Core Mathematics",
+        shortName: "Core Math",
+        icon: "📐",
+        description: "Matrices & Determinants, Real Numbers, Algebraic Expressions & Linear Equations",
+        primaryTopics: [
+          "Matrices and Determinants",
+          "Real and Complex Numbers",
+          "Logarithms & Scientific Notation",
+          "Algebraic Formulas & Geometry"
+        ],
+      },
+    ],
+  },
+  {
+    id: "humanities_languages",
+    name: "Languages & Humanities",
+    shortName: "Languages",
+    icon: "📖",
+    description: "Grammar systems, voice & narration, vocabulary synthesis & literary rhetoric",
+    color: "#a78bfa",
+    borderColor: "rgba(167, 139, 250, 0.3)",
+    badgeBg: "rgba(167, 139, 250, 0.1)",
+    subCategories: [
+      {
+        subjectId: "english",
+        name: "English Language & Rhetoric",
+        shortName: "English",
+        icon: "📖",
+        description: "Parts of Speech, Active/Passive Voice, Direct/Indirect Narration & Comprehension",
+        primaryTopics: [
+          "Parts of Speech & Sentence Forms",
+          "Active & Passive Voice Transformation",
+          "Direct & Indirect Narration",
+          "Vocabulary & Literary Devices"
+        ],
+      },
+    ],
+  },
+];
+
 export const SUBJECT_METADATA: Record<SubjectType, {
   name: string;
   color: string;
@@ -40,7 +138,7 @@ export const SUBJECT_METADATA: Record<SubjectType, {
     description: "Arithmetic, Matrices, Real Numbers, Algebra & Geometry",
   },
   science: {
-    name: "Science",
+    name: "Natural Sciences",
     color: "#34d399",
     icon: "🔬",
     borderColor: "rgba(52, 211, 153, 0.3)",

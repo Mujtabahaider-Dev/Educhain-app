@@ -16,13 +16,14 @@ import { useEduStore } from "@/store/useEduStore";
 import { STAGES_DATA } from "@/data/curriculum";
 import { supabase } from "@/lib/supabase/client";
 import { GradeType, Stage } from "@/types/curriculum";
-import { GRADE_SHORT_LABELS, SUBJECT_METADATA } from "@/data/constants";
+import { GRADE_SHORT_LABELS, SUBJECT_METADATA, STREAM_DOMAINS, SUBJECT_TO_STREAM } from "@/data/constants";
 import { sound } from "@/lib/audio";
-import { Layers } from "lucide-react";
+import { Layers, ChevronRight, BookOpen, Compass } from "lucide-react";
 
 export default function Home() {
   const [viewMode, setViewMode] = useState<"landing" | "app">("landing");
   const [activeTab, setActiveTab] = useState<string>("map");
+  const [selectedStream, setSelectedStream] = useState<string>("all");
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
@@ -109,14 +110,34 @@ export default function Home() {
     }
   }, [settings.theme]);
 
-  // Filter stages by Grade and Subject
+  // Filter stages by Grade, Stream Domain, and Subject
   const filteredStages = useMemo(() => {
     return STAGES_DATA.filter((stage) => {
       const matchesGrade = stage.grade === grade || (grade === "grade_9" && stage.grade === "grade_9");
+      const stageStream = stage.subject ? SUBJECT_TO_STREAM[stage.subject] : null;
+      const matchesStream = selectedStream === "all" || stageStream === selectedStream;
       const matchesSubject = selectedSubject === "all" || stage.subject === selectedSubject;
-      return matchesGrade && matchesSubject;
+      return matchesGrade && matchesStream && matchesSubject;
     });
-  }, [grade, selectedSubject]);
+  }, [grade, selectedStream, selectedSubject]);
+
+  // Group filtered stages by Chapter / Topic unit for clean hierarchical display
+  const groupedByChapter = useMemo(() => {
+    const groups: { chapter: string; stages: Stage[] }[] = [];
+    filteredStages.forEach((stage) => {
+      const chapterTitle = stage.chapter || "Core Curriculum";
+      const existing = groups.find((g) => g.chapter === chapterTitle);
+      if (existing) {
+        existing.stages.push(stage);
+      } else {
+        groups.push({ chapter: chapterTitle, stages: [stage] });
+      }
+    });
+    return groups;
+  }, [filteredStages]);
+
+  const activeStreamMeta = STREAM_DOMAINS.find((d) => d.id === selectedStream);
+  const activeSubjectMeta = selectedSubject !== "all" ? SUBJECT_METADATA[selectedSubject as keyof typeof SUBJECT_METADATA] : null;
 
   const handleNextStage = () => {
     if (!selectedStage || !selectedStage.subject) return;
@@ -178,71 +199,153 @@ export default function Home() {
                 {/* 1. Quick Onboarding 3-Step Banner (Dismissible) */}
                 <HowItWorksBanner />
 
-                {/* 2. Hero Next Recommended Quest & Subject Hubs */}
+                {/* 2. Hero Next Recommended Quest & Hierarchical Streams */}
                 <NextQuestHero
                   stages={STAGES_DATA.filter((s) => s.grade === grade || (grade === "grade_9" && s.grade === "grade_9"))}
+                  selectedStream={selectedStream}
+                  onSelectStream={(stream) => setSelectedStream(stream)}
                   selectedSubject={selectedSubject}
                   onSelectSubject={(sub) => setSelectedSubject(sub)}
                   onStartStage={(stage) => setSelectedStage(stage)}
                 />
 
-                {/* 3. Stage Cards Section Header */}
-                <div className="flex items-center justify-between mb-4 pt-4 border-t border-neutral-200 dark:border-white/[0.08]">
-                  <div>
-                    <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                      <span>
-                        {selectedSubject === "all"
-                          ? "All Learning Stages"
-                          : `${SUBJECT_METADATA[selectedSubject as keyof typeof SUBJECT_METADATA]?.name || "Subject"} Chain`}
-                      </span>
-                      <span className="text-xs font-mono font-normal text-neutral-500 dark:text-neutral-400">
-                        ({filteredStages.length} Stages)
-                      </span>
-                    </h2>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      {selectedSubject === "all"
-                        ? "Complete stages sequentially to unlock the next link in your learning chain."
-                        : `Follow this track from Stage 1 to Master ${SUBJECT_METADATA[selectedSubject as keyof typeof SUBJECT_METADATA]?.name}.`}
-                    </p>
-                  </div>
+                {/* 3. Interactive Breadcrumb Navigation */}
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-4 px-3.5 py-2.5 rounded-xl bg-neutral-100/70 dark:bg-white/[0.03] border border-neutral-200/60 dark:border-white/[0.06] text-xs font-mono">
+                  <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1">
+                    <Compass className="w-3.5 h-3.5" />
+                    <span>Track:</span>
+                  </span>
 
-                  {selectedSubject !== "all" && (
+                  <button
+                    onClick={() => {
+                      sound.playClick();
+                      setSelectedStream("all");
+                      setSelectedSubject("all");
+                    }}
+                    className={`hover:text-black dark:hover:text-white transition-colors ${
+                      selectedStream === "all" && selectedSubject === "all"
+                        ? "text-neutral-900 dark:text-white font-bold"
+                        : "text-neutral-500"
+                    }`}
+                  >
+                    All Disciplines
+                  </button>
+
+                  {selectedStream !== "all" && activeStreamMeta && (
+                    <>
+                      <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                      <button
+                        onClick={() => {
+                          sound.playClick();
+                          setSelectedSubject("all");
+                        }}
+                        className={`hover:text-black dark:hover:text-white transition-colors flex items-center gap-1 ${
+                          selectedSubject === "all"
+                            ? "text-neutral-900 dark:text-white font-bold"
+                            : "text-neutral-500"
+                        }`}
+                      >
+                        <span>{activeStreamMeta.icon}</span>
+                        <span>{activeStreamMeta.name}</span>
+                      </button>
+                    </>
+                  )}
+
+                  {selectedSubject !== "all" && activeSubjectMeta && (
+                    <>
+                      <ChevronRight className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                      <span className="text-sky-600 dark:text-cyan-400 font-bold flex items-center gap-1">
+                        <span>{activeSubjectMeta.icon}</span>
+                        <span>{activeSubjectMeta.name}</span>
+                      </span>
+                    </>
+                  )}
+
+                  {(selectedStream !== "all" || selectedSubject !== "all") && (
                     <button
                       onClick={() => {
                         sound.playClick();
+                        setSelectedStream("all");
                         setSelectedSubject("all");
                       }}
-                      className="text-xs font-mono text-neutral-500 hover:text-neutral-900 dark:hover:text-white underline underline-offset-4"
+                      className="ml-auto text-[11px] text-neutral-500 hover:text-neutral-900 dark:hover:text-white underline underline-offset-4"
                     >
-                      Clear Filter
+                      Reset Filter
                     </button>
                   )}
                 </div>
 
-                {/* 4. Stages Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredStages.map((stage) => {
-                    const subProgress = (stage.subject ? subjectProgress[stage.subject] : null) || {
-                      unlockedStages: [],
-                      completedStages: [],
-                      bestScores: {},
-                    };
+                {/* Section Header */}
+                <div className="flex items-center justify-between mb-6 pb-3 border-b border-neutral-200 dark:border-white/[0.08]">
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                      <span>
+                        {selectedSubject !== "all" && activeSubjectMeta
+                          ? `${activeSubjectMeta.name} Chain`
+                          : selectedStream !== "all" && activeStreamMeta
+                          ? `${activeStreamMeta.name} Quests`
+                          : "All Curriculum Stages"}
+                      </span>
+                      <span className="text-xs font-mono font-normal text-neutral-500 dark:text-neutral-400">
+                        ({filteredStages.length} Stages in {groupedByChapter.length} Units)
+                      </span>
+                    </h2>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                      {selectedSubject !== "all" && activeSubjectMeta
+                        ? `Follow this specialized ${activeSubjectMeta.name} track sequentially from Unit 1.`
+                        : "Browse curriculum units grouped by chapter and topic. Complete stages to unlock the next link."}
+                    </p>
+                  </div>
+                </div>
 
-                    const isUnlocked = subProgress.unlockedStages.includes(stage.id) || unlockedStages.includes(stage.id);
-                    const isCompleted = subProgress.completedStages.includes(stage.id) || completedStages.includes(stage.id);
-                    const stageBestScore = subProgress.bestScores[stage.id] || bestScores[stage.id] || 0;
+                {/* 4. Stages Grouped Hierarchically by Unit / Chapter */}
+                <div className="space-y-8">
+                  {groupedByChapter.map((group, gIdx) => (
+                    <div key={group.chapter} className="space-y-3.5">
+                      
+                      {/* Chapter / Topic Header */}
+                      <div className="flex items-center justify-between pb-2 border-b border-neutral-200/50 dark:border-white/[0.04]">
+                        <div className="flex items-center gap-2">
+                          <span className="p-1 rounded bg-neutral-100 dark:bg-white/[0.04] text-neutral-600 dark:text-neutral-400">
+                            <BookOpen className="w-3.5 h-3.5" />
+                          </span>
+                          <h3 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                            <span>Unit {gIdx + 1}: {group.chapter}</span>
+                          </h3>
+                        </div>
+                        <span className="text-[11px] font-mono text-neutral-400 dark:text-neutral-500">
+                          {group.stages.length} {group.stages.length === 1 ? "Stage" : "Stages"}
+                        </span>
+                      </div>
 
-                    return (
-                      <StageCard
-                        key={stage.id}
-                        stage={stage}
-                        isUnlocked={isUnlocked}
-                        isCompleted={isCompleted}
-                        bestScore={stageBestScore}
-                        onSelect={(s) => setSelectedStage(s)}
-                      />
-                    );
-                  })}
+                      {/* Grid of Stage Cards for this Unit */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {group.stages.map((stage) => {
+                          const subProgress = (stage.subject ? subjectProgress[stage.subject] : null) || {
+                            unlockedStages: [],
+                            completedStages: [],
+                            bestScores: {},
+                          };
+
+                          const isUnlocked = subProgress.unlockedStages.includes(stage.id) || unlockedStages.includes(stage.id);
+                          const isCompleted = subProgress.completedStages.includes(stage.id) || completedStages.includes(stage.id);
+                          const stageBestScore = subProgress.bestScores[stage.id] || bestScores[stage.id] || 0;
+
+                          return (
+                            <StageCard
+                              key={stage.id}
+                              stage={stage}
+                              isUnlocked={isUnlocked}
+                              isCompleted={isCompleted}
+                              bestScore={stageBestScore}
+                              onSelect={(s) => setSelectedStage(s)}
+                            />
+                          );
+                        })}
+                      </div>
+
+                    </div>
+                  ))}
                 </div>
 
               </div>

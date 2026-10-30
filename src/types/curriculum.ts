@@ -2,6 +2,29 @@ export type SubjectType = "mathematics" | "science" | "english" | "computer_scie
 
 export type GradeType = "grade_9" | "grade_10" | "grade_11" | "grade_12";
 
+export type StreamDomainId = "stem_science" | "mathematics_stream" | "humanities_languages";
+
+export interface SubCategoryMetadata {
+  subjectId: SubjectType;
+  name: string;
+  shortName: string;
+  icon: string;
+  description: string;
+  primaryTopics: string[];
+}
+
+export interface StreamDomain {
+  id: StreamDomainId;
+  name: string;
+  shortName: string;
+  icon: string;
+  description: string;
+  color: string;
+  badgeBg: string;
+  borderColor: string;
+  subCategories: SubCategoryMetadata[];
+}
+
 export interface Question {
   id: string;
   question: string;
@@ -13,6 +36,8 @@ export interface Question {
 
 export interface Stage {
   id: number | string;
+  streamId?: StreamDomainId;
+  streamName?: string;
   subject?: SubjectType;
   subjectName?: string;
   subjectStageNumber?: number;
