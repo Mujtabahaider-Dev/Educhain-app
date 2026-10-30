@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { GradeType, SubjectType, MistakeRecord, QuizAttemptRecord } from "@/types/curriculum";
+import { supabase } from "@/lib/supabase/client";
 import { UserState } from "@/types/user";
 import { RANKS, ACHIEVEMENTS } from "@/data/constants";
 import { sound } from "@/lib/audio";
@@ -13,6 +14,7 @@ interface EduStoreState extends UserState {
   
   // Actions
   setProfile: (name: string, avatar: string, grade: GradeType, isGuest?: boolean) => void;
+  loadCloudProfile: (cloudData: Partial<UserState>) => void;
   setGuestSession: () => void;
   signOut: () => void;
   updateSettings: (settings: Partial<UserState["settings"]>) => void;
@@ -81,6 +83,14 @@ export const useEduStore = create<EduStoreState>()(
 
       setProfile: (name, avatar, grade, isGuest = false) => {
         set({ name, avatar, grade, isGuest });
+      },
+
+      loadCloudProfile: (cloudData) => {
+        set((state) => ({
+          ...state,
+          ...cloudData,
+          isGuest: false,
+        }));
       },
 
       setGuestSession: () => {
@@ -270,6 +280,30 @@ export const useEduStore = create<EduStoreState>()(
         });
 
         get().checkStreak();
+
+        // Automatically sync progress to Supabase for authenticated users
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user) {
+            const current = get();
+            supabase.from("profiles").upsert({
+              id: session.user.id,
+              player_name: current.name,
+              player_avatar: current.avatar,
+              player_grade: current.grade,
+              xp: current.xp,
+              stages_completed: current.completedStages.length,
+              current_streak: current.currentStreak,
+              longest_streak: current.longestStreak,
+              accuracy: current.totalQuestionsAnswered > 0 ? Math.round((current.totalQuestionsCorrect / current.totalQuestionsAnswered) * 100) : 0,
+              quizzes_attempted: current.totalQuizzesAttempted,
+              questions_answered: current.totalQuestionsAnswered,
+              questions_correct: current.totalQuestionsCorrect,
+              subject_progress: current.subjectProgress,
+              completed_stages_list: current.completedStages.filter((id) => typeof id === "number"),
+              unlocked_achievements: current.unlockedAchievements,
+            }).then(() => {});
+          }
+        });
       },
 
       masterMistake: (mistakeId) => {

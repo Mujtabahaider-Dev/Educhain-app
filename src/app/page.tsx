@@ -37,17 +37,49 @@ export default function Home() {
     subjectProgress,
     settings,
     setProfile,
+    loadCloudProfile,
   } = useEduStore();
 
   // Listen for Supabase Auth state changes (e.g. Email confirmation or session restore)
   useEffect(() => {
+    const syncUser = async (user: any) => {
+      const meta = user.user_metadata || {};
+      
+      // Fetch user's saved progress from Supabase profiles
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        loadCloudProfile({
+          id: user.id,
+          name: profile.player_name || meta.name || "Scholar",
+          avatar: profile.player_avatar || meta.avatar || "🧠",
+          grade: (profile.player_grade as GradeType) || (meta.grade as GradeType) || "grade_9",
+          xp: profile.xp || 0,
+          currentStreak: profile.current_streak || 0,
+          longestStreak: profile.longest_streak || 0,
+          completedStages: profile.completed_stages_list || [],
+          unlockedStages: profile.subject_progress
+            ? Object.values(profile.subject_progress as Record<string, any>).flatMap((s: any) => s.unlockedStages || [])
+            : [1, 7, 13, 19],
+          subjectProgress: profile.subject_progress || undefined,
+          unlockedAchievements: profile.unlocked_achievements || [],
+          totalQuizzesAttempted: profile.quizzes_attempted || 0,
+          totalQuestionsAnswered: profile.questions_answered || 0,
+          totalQuestionsCorrect: profile.questions_correct || 0,
+        });
+      } else {
+        setProfile(meta.name || "Scholar", meta.avatar || "🧠", (meta.grade as GradeType) || "grade_9");
+      }
+      setViewMode("app");
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        const meta = session.user.user_metadata || {};
-        if (meta.name || meta.grade) {
-          setProfile(meta.name || "Scholar", meta.avatar || "🧠", (meta.grade as GradeType) || "grade_9");
-        }
-        setViewMode("app");
+        syncUser(session.user);
       }
     });
 
@@ -57,18 +89,14 @@ export default function Home() {
         return;
       }
       if (session?.user) {
-        const meta = session.user.user_metadata || {};
-        if (meta.name || meta.grade) {
-          setProfile(meta.name || "Scholar", meta.avatar || "🧠", (meta.grade as GradeType) || "grade_9");
-        }
-        setViewMode("app");
+        syncUser(session.user);
       }
     });
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [setProfile]);
+  }, [setProfile, loadCloudProfile]);
 
   // Ensure HTML has correct class on mount based on store
   useEffect(() => {
