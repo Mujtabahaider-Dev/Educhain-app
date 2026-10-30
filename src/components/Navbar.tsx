@@ -33,6 +33,7 @@ interface NavbarProps {
   onOpenProfile?: () => void;
   onOpenLanding?: () => void;
   onOpenAuth?: (mode?: "signin" | "signup") => void;
+  onSignOut?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -41,6 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenProfile,
   onOpenLanding,
   onOpenAuth,
+  onSignOut,
 }) => {
   const { xp, currentStreak, settings, updateSettings, toggleTheme, mistakes, name, avatar, signOut } = useEduStore();
   const [syncing, setSyncing] = useState(false);
@@ -65,6 +67,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     await supabase.auth.signOut();
     signOut();
     setHasSession(false);
+    if (onSignOut) {
+      onSignOut();
+    } else if (onOpenLanding) {
+      onOpenLanding();
+    }
   };
 
   // Compute current rank

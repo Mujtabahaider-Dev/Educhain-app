@@ -52,6 +52,10 @@ export default function Home() {
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT") {
+        setViewMode("landing");
+        return;
+      }
       if (session?.user) {
         const meta = session.user.user_metadata || {};
         if (meta.name || meta.grade) {
@@ -131,6 +135,7 @@ export default function Home() {
             onOpenProfile={() => setIsProfileOpen(true)}
             onOpenLanding={() => setViewMode("landing")}
             onOpenAuth={openAuthModal}
+            onSignOut={() => setViewMode("landing")}
           />
 
           {/* Main Content Area */}
