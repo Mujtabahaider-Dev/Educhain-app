@@ -5,24 +5,17 @@ import { useEduStore } from "@/store/useEduStore";
 import { sound } from "@/lib/audio";
 import { RANKS } from "@/data/constants";
 import { 
-  Sparkles, 
   Flame, 
   Zap, 
   Volume2, 
   VolumeX, 
-  RotateCcw, 
   Cloud, 
-  ShieldCheck, 
-  Award,
-  BookOpen,
-  Hammer,
-  BarChart3,
-  Trophy,
-  Sun,
-  Moon,
-  Globe,
-  LogIn,
-  LogOut
+  BookOpen, 
+  BarChart3, 
+  Trophy, 
+  Sun, 
+  Moon, 
+  LogIn 
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 
@@ -40,11 +33,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   onOpenProfile,
-  onOpenLanding,
   onOpenAuth,
-  onSignOut,
 }) => {
-  const { xp, currentStreak, settings, updateSettings, toggleTheme, mistakes, name, avatar, isGuest, signOut } = useEduStore();
+  const { xp, currentStreak, settings, updateSettings, toggleTheme, mistakes, name, avatar, isGuest } = useEduStore();
   const [syncing, setSyncing] = useState(false);
   const [hasSession, setHasSession] = useState(false);
 
@@ -61,18 +52,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       authListener?.subscription.unsubscribe();
     };
   }, []);
-
-  const handleSignOut = async () => {
-    sound.playClick();
-    await supabase.auth.signOut();
-    signOut();
-    setHasSession(false);
-    if (onSignOut) {
-      onSignOut();
-    } else if (onOpenLanding) {
-      onOpenLanding();
-    }
-  };
 
   // Compute current rank
   const currentRank = RANKS.slice().reverse().find((r) => xp >= r.minXp) || RANKS[0];
@@ -125,13 +104,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </button>
 
-          {/* Navigation Tabs */}
+          {/* Navigation Tabs (Review Errors moved inside My Progress) */}
           <nav className="hidden md:flex items-center gap-1 border-l border-neutral-200 dark:border-white/[0.08] pl-6 ml-2">
             {[
               { id: "map", label: "My Quests", icon: BookOpen },
-              { id: "forge", label: "Review Errors", icon: Hammer, badge: pendingMistakes > 0 ? pendingMistakes : null },
               { id: "leaderboard", label: "Leaderboard", icon: Trophy },
-              { id: "analytics", label: "My Progress", icon: BarChart3 },
+              { 
+                id: "analytics", 
+                label: "My Progress", 
+                icon: BarChart3, 
+                badge: pendingMistakes > 0 ? `${pendingMistakes} errors` : null 
+              },
             ].map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -142,9 +125,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     setActiveTab(item.id);
                     sound.playClick();
                   }}
-                  className={`relative flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-md transition-all ${
                     isActive
-                      ? "text-neutral-900 dark:text-white bg-neutral-100 dark:bg-white/[0.08] border border-neutral-200 dark:border-white/15 shadow-sm dark:shadow-none"
+                      ? "text-neutral-900 dark:text-white bg-neutral-100 dark:bg-white/[0.08] border border-neutral-200 dark:border-white/15 shadow-sm dark:shadow-none font-semibold"
                       : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-white/[0.03]"
                   }`}
                 >
@@ -161,20 +144,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
         </div>
 
-        {/* Right Status / Scholar Stats */}
+        {/* Right Status / Scholar Stats & Profile */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           
-          {/* Landing Page Shortcut */}
-          {onOpenLanding && (
-            <button
-              onClick={() => { sound.playClick(); onOpenLanding(); }}
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Landing Page</span>
-            </button>
-          )}
-
           {/* Cloud Status Pill */}
           <button
             onClick={handleSimulateSync}
@@ -227,38 +199,28 @@ export const Navbar: React.FC<NavbarProps> = ({
             {settings.soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-neutral-400 dark:text-neutral-600" />}
           </button>
 
-          {/* Auth Button: Login vs Sign Out */}
-          {hasSession ? (
+          {/* If guest and not signed in, show a subtle Login button */}
+          {!hasSession && isGuest && onOpenAuth && (
             <button
-              onClick={handleSignOut}
-              title="Sign Out of Supabase"
-              className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-rose-600 dark:text-rose-400 border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 transition-colors"
+              onClick={() => { sound.playClick(); onOpenAuth("signin"); }}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Login</span>
             </button>
-          ) : (
-            onOpenAuth && (
-              <button
-                onClick={() => { sound.playClick(); onOpenAuth("signin"); }}
-                className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Login</span>
-              </button>
-            )
           )}
 
-          {/* Scholar Profile / Avatar */}
+          {/* Scholar Profile / Avatar Button (Opens Account Popup which contains Sign Out) */}
           <button
             onClick={() => {
               if (onOpenProfile) onOpenProfile();
               sound.playClick();
             }}
+            title="Account Details & Settings"
             className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-neutral-200 dark:border-white/[0.12] bg-neutral-50 dark:bg-white/[0.04] hover:bg-neutral-100 dark:hover:bg-white/[0.08] hover:border-neutral-300 dark:hover:border-white/25 transition-all text-xs font-medium"
           >
             <span className="text-sm">{avatar || "👤"}</span>
-            <span className="hidden sm:inline font-mono text-neutral-800 dark:text-neutral-200">
+            <span className="hidden sm:inline font-mono text-neutral-800 dark:text-neutral-200 font-semibold">
               {name || (isGuest ? "Guest Explorer" : "Scholar")}
             </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-white/10 text-neutral-700 dark:text-neutral-300">
@@ -274,9 +236,13 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="md:hidden flex items-center justify-around border-t border-neutral-200 dark:border-white/[0.06] bg-white/95 dark:bg-black/90 py-2 px-2">
         {[
           { id: "map", label: "Quests", icon: BookOpen },
-          { id: "forge", label: "Errors", icon: Hammer, badge: pendingMistakes > 0 ? pendingMistakes : null },
           { id: "leaderboard", label: "Ranks", icon: Trophy },
-          { id: "analytics", label: "Progress", icon: BarChart3 },
+          { 
+            id: "analytics", 
+            label: "Progress", 
+            icon: BarChart3, 
+            badge: pendingMistakes > 0 ? pendingMistakes : null 
+          },
         ].map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -287,11 +253,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setActiveTab(item.id);
                 sound.playClick();
               }}
-              className={`flex flex-col items-center gap-1 px-3 py-1 text-[11px] rounded transition-all ${
+              className={`flex flex-col items-center gap-1 px-3 py-1 text-[11px] rounded transition-all relative ${
                 isActive ? "text-neutral-900 dark:text-white font-semibold" : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300"
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <div className="relative">
+                <Icon className="w-4 h-4" />
+                {item.badge !== null && item.badge !== undefined && (
+                  <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-amber-500" />
+                )}
+              </div>
               <span>{item.label}</span>
             </button>
           );

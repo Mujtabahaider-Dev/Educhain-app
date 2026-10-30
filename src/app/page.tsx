@@ -4,7 +4,6 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { StageCard } from "@/components/StageCard";
 import { QuizModal } from "@/components/QuizModal";
-import { MistakeForge } from "@/components/MistakeForge";
 import { Leaderboard } from "@/components/Leaderboard";
 import { AnalyticsView } from "@/components/AnalyticsView";
 import { ProfileModal } from "@/components/ProfileModal";
@@ -164,9 +163,7 @@ export default function Home() {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             onOpenProfile={() => setIsProfileOpen(true)}
-            onOpenLanding={() => setViewMode("landing")}
             onOpenAuth={openAuthModal}
-            onSignOut={() => setViewMode("landing")}
           />
 
           {/* Main Content Area */}
@@ -250,17 +247,12 @@ export default function Home() {
             )}
 
             {/* ======================================================== */}
-            {/* TAB 2: MISTAKE FORGE */}
-            {/* ======================================================== */}
-            {activeTab === "forge" && <MistakeForge />}
-
-            {/* ======================================================== */}
-            {/* TAB 3: LEADERBOARD */}
+            {/* TAB 2: LEADERBOARD */}
             {/* ======================================================== */}
             {activeTab === "leaderboard" && <Leaderboard />}
 
             {/* ======================================================== */}
-            {/* TAB 4: ANALYTICS */}
+            {/* TAB 3: MY PROGRESS (Contains Performance Analytics & Review Errors) */}
             {/* ======================================================== */}
             {activeTab === "analytics" && <AnalyticsView />}
 
@@ -295,9 +287,13 @@ export default function Home() {
             />
           )}
 
-          {/* Profile & Settings Modal */}
+          {/* Profile & Settings Modal (Includes Sign Out inside popup) */}
           {isProfileOpen && (
-            <ProfileModal onClose={() => setIsProfileOpen(false)} />
+            <ProfileModal 
+              onClose={() => setIsProfileOpen(false)}
+              onSignOut={() => setViewMode("landing")}
+              onOpenAuth={(mode) => openAuthModal(mode)}
+            />
           )}
 
         </div>

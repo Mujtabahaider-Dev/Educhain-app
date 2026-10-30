@@ -1,24 +1,52 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useEduStore } from "@/store/useEduStore";
 import { GradeType } from "@/types/curriculum";
-import { GRADE_LABELS } from "@/data/constants";
+import { GRADE_LABELS, RANKS } from "@/data/constants";
 import { sound } from "@/lib/audio";
-import { X, Check, RotateCcw, User, ShieldAlert } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
+import { 
+  X, 
+  Check, 
+  RotateCcw, 
+  User, 
+  LogOut, 
+  LogIn, 
+  ShieldCheck, 
+  Mail, 
+  Sparkles,
+  Zap
+} from "lucide-react";
 
 interface ProfileModalProps {
   onClose: () => void;
+  onSignOut?: () => void;
+  onOpenAuth?: (mode?: "signin" | "signup") => void;
 }
 
 const AVATARS = ["🧠", "🦉", "🚀", "⚡", "🧬", "🧙‍♂️", "🎨", "🤖", "🛡️", "💎"];
 
-export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
-  const { name, avatar, grade, setProfile, resetProgress } = useEduStore();
+export const ProfileModal: React.FC<ProfileModalProps> = ({ 
+  onClose,
+  onSignOut,
+  onOpenAuth
+}) => {
+  const { name, avatar, grade, xp, isGuest, setProfile, resetProgress, signOut } = useEduStore();
   const [tempName, setTempName] = useState(name || "Scholar");
   const [tempAvatar, setTempAvatar] = useState(avatar || "🧠");
   const [tempGrade, setTempGrade] = useState<GradeType>(grade || "grade_9");
   const [showConfirmReset, setShowConfirmReset] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserEmail(session?.user?.email || null);
+    });
+  }, []);
+
+  const currentRank = RANKS.slice().reverse().find((r) => xp >= r.minXp) || RANKS[0];
 
   const handleSave = () => {
     sound.playClick();
@@ -33,15 +61,27 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
     onClose();
   };
 
+  const handleSignOutClick = async () => {
+    setIsSigningOut(true);
+    sound.playClick();
+    await supabase.auth.signOut();
+    signOut();
+    setIsSigningOut(false);
+    onClose();
+    if (onSignOut) {
+      onSignOut();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-white/15 rounded-2xl p-6 shadow-2xl relative transition-colors duration-200">
+      <div className="w-full max-w-md bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-white/15 rounded-2xl p-6 shadow-2xl relative transition-colors duration-200 max-h-[90vh] overflow-y-auto">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-neutral-200 dark:border-white/[0.08]">
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-sky-600 dark:text-cyan-400" />
-            <h3 className="text-base font-semibold text-neutral-900 dark:text-white">Scholar Profile</h3>
+            <h3 className="text-base font-semibold text-neutral-900 dark:text-white">Account Details</h3>
           </div>
           <button
             onClick={() => { sound.playClick(); onClose(); }}
@@ -49,6 +89,67 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
           >
             <X className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* Account Status Card */}
+        <div className="mb-5 p-3.5 rounded-xl border border-neutral-200/80 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.02]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl">{tempAvatar}</span>
+              <div>
+                <div className="text-sm font-semibold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                  <span>{name || "Scholar"}</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-neutral-200 dark:bg-white/10 text-neutral-700 dark:text-neutral-300">
+                    {currentRank.name}
+                  </span>
+                </div>
+                <div className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 flex items-center gap-1 mt-0.5">
+                  {userEmail ? (
+                    <>
+                      <Mail className="w-3 h-3 text-emerald-500" />
+                      <span className="truncate max-w-[200px]">{userEmail}</span>
+                    </>
+                  ) : (
+                    <span>Guest Mode (Local Only)</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400 flex items-center justify-end gap-1">
+                <Zap className="w-3 h-3 fill-current" />
+                <span>{xp} XP</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Cloud Sync Status */}
+          <div className="mt-2.5 pt-2 border-t border-neutral-200/60 dark:border-white/5 flex items-center justify-between text-[11px]">
+            {userEmail ? (
+              <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Cloud Connected via Supabase</span>
+              </span>
+            ) : (
+              <span className="text-amber-600 dark:text-amber-400">
+                ⚠️ Progress is stored only in this browser
+              </span>
+            )}
+
+            {!userEmail && onOpenAuth && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenAuth("signup");
+                }}
+                className="text-xs font-semibold text-sky-600 dark:text-cyan-400 hover:underline"
+              >
+                Sign Up to Sync
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Name Input */}
@@ -76,7 +177,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
                 key={av}
                 type="button"
                 onClick={() => { setTempAvatar(av); sound.playClick(); }}
-                className={`h-11 rounded-xl text-xl flex items-center justify-center transition-all ${
+                className={`h-10 rounded-xl text-lg flex items-center justify-center transition-all ${
                   tempAvatar === av
                     ? "bg-black/10 dark:bg-white/20 border-2 border-black dark:border-white scale-105"
                     : "bg-neutral-50 dark:bg-[#141414] border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10"
@@ -106,8 +207,37 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
           </select>
         </div>
 
+        {/* SIGN OUT BUTTON (Requested in Account Details Popup) */}
+        <div className="mb-5 pt-3 border-t border-neutral-200 dark:border-white/[0.08]">
+          {userEmail ? (
+            <button
+              type="button"
+              onClick={handleSignOutClick}
+              disabled={isSigningOut}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 text-xs font-semibold transition-all disabled:opacity-50"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>{isSigningOut ? "Signing Out..." : "Sign Out of Account"}</span>
+            </button>
+          ) : (
+            onOpenAuth && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenAuth("signin");
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-cyan-400 hover:bg-sky-500/20 text-xs font-semibold transition-all"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Sign In / Create Account</span>
+              </button>
+            )
+          )}
+        </div>
+
         {/* Save & Reset Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-white/[0.08]">
+        <div className="flex items-center justify-between pt-3 border-t border-neutral-200 dark:border-white/[0.08]">
           {showConfirmReset ? (
             <div className="flex items-center gap-2">
               <button
@@ -132,7 +262,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
               className="text-xs text-rose-600/80 dark:text-rose-400/80 hover:text-rose-600 dark:hover:text-rose-400 flex items-center gap-1 font-mono"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>Reset Save Data</span>
+              <span>Reset Progress</span>
             </button>
           )}
 
