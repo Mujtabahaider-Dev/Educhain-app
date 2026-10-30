@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { Stage } from "@/types/curriculum";
-import { SUBJECT_METADATA, SUBJECT_TO_STREAM, STREAM_DOMAINS } from "@/data/constants";
+import { SUBJECT_METADATA } from "@/data/constants";
 import { sound } from "@/lib/audio";
-import { Lock, CheckCircle2, Play, Star, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { Lock, CheckCircle2, Play, ChevronDown, ChevronUp, Info } from "lucide-react";
 
 interface StageCardProps {
   stage: Stage;
@@ -23,8 +23,6 @@ export const StageCard: React.FC<StageCardProps> = ({
 }) => {
   const [showDetails, setShowDetails] = useState(false);
   const meta = stage.subject ? SUBJECT_METADATA[stage.subject] : SUBJECT_METADATA.science;
-  const streamId = stage.subject ? SUBJECT_TO_STREAM[stage.subject] : null;
-  const streamMeta = streamId ? STREAM_DOMAINS.find((d) => d.id === streamId) : null;
 
   const handleClick = (e: React.MouseEvent) => {
     // If clicking the info toggle, don't trigger quiz
@@ -48,16 +46,15 @@ export const StageCard: React.FC<StageCardProps> = ({
       }`}
     >
       <div>
-        {/* Top Row: Stream & Subject Badge & Difficulty/XP */}
-        <div className="flex items-center justify-between mb-3">
+        {/* Top Row: Subject & Stage #, Difficulty, XP */}
+        <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
             <span
               className="w-2.5 h-2.5 rounded-full shrink-0"
               style={{ backgroundColor: meta.color }}
             />
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 truncate max-w-[200px]">
-              {streamMeta?.shortName ? `${streamMeta.shortName} › ` : ""}
-              {stage.subjectName || "Track"} • S{stage.subjectStageNumber || stage.id}
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-600 dark:text-neutral-300">
+              {stage.subjectName || "Track"} • Stage {stage.subjectStageNumber || stage.id}
             </span>
           </div>
 
@@ -82,7 +79,7 @@ export const StageCard: React.FC<StageCardProps> = ({
           {stage.title}
         </h3>
 
-        {/* Chapter / Topic */}
+        {/* Topic Tag */}
         <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1 mb-3">
           {stage.chapter} {stage.topic ? `— ${stage.topic}` : ""}
         </p>
