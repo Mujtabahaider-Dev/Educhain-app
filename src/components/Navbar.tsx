@@ -44,7 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
   onSignOut,
 }) => {
-  const { xp, currentStreak, settings, updateSettings, toggleTheme, mistakes, name, avatar, signOut } = useEduStore();
+  const { xp, currentStreak, settings, updateSettings, toggleTheme, mistakes, name, avatar, isGuest, signOut } = useEduStore();
   const [syncing, setSyncing] = useState(false);
   const [hasSession, setHasSession] = useState(false);
 
@@ -257,10 +257,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-neutral-200 dark:border-white/[0.12] bg-neutral-50 dark:bg-white/[0.04] hover:bg-neutral-100 dark:hover:bg-white/[0.08] hover:border-neutral-300 dark:hover:border-white/25 transition-all text-xs font-medium"
           >
-            <span className="text-sm">{avatar || "🧠"}</span>
-            <span className="hidden sm:inline font-mono text-neutral-800 dark:text-neutral-200">{name || "Scholar"}</span>
+            <span className="text-sm">{avatar || "👤"}</span>
+            <span className="hidden sm:inline font-mono text-neutral-800 dark:text-neutral-200">
+              {name || (isGuest ? "Guest Explorer" : "Scholar")}
+            </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-white/10 text-neutral-700 dark:text-neutral-300">
-              {currentRank.name}
+              {isGuest && xp === 0 ? "Guest" : currentRank.name}
             </span>
           </button>
 

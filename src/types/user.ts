@@ -11,6 +11,7 @@ export interface UserState {
   name: string;
   avatar: string;
   grade: GradeType;
+  isGuest?: boolean;
   xp: number;
   currentStreak: number;
   longestStreak: number;

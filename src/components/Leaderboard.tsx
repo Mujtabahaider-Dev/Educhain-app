@@ -10,7 +10,7 @@ import { Trophy, Zap, Flame, Target, Award, Crown } from "lucide-react";
 type Category = "xp" | "stages" | "streak" | "accuracy";
 
 export const Leaderboard: React.FC = () => {
-  const { name, avatar, xp, completedStages, currentStreak, totalQuizzesAttempted, totalQuestionsCorrect, totalQuestionsAnswered } = useEduStore();
+  const { name, avatar, xp, completedStages, currentStreak, totalQuizzesAttempted, totalQuestionsCorrect, totalQuestionsAnswered, isGuest } = useEduStore();
   const [activeCategory, setActiveCategory] = useState<Category>("xp");
 
   // Compute current user's accuracy
@@ -20,9 +20,12 @@ export const Leaderboard: React.FC = () => {
 
   const currentRank = RANKS.slice().reverse().find((r) => xp >= r.minXp) || RANKS[0];
 
+  // Only include user on leaderboard if they've earned XP / attempted a quiz or are signed in
+  const shouldShowUser = !isGuest || xp > 0 || totalQuizzesAttempted > 0;
+
   const currentUserScholar: LeaderboardScholar = {
     id: "current_user",
-    name: name || "Scholar",
+    name: name || (isGuest ? "Guest Scholar" : "Scholar"),
     avatar: avatar || "🧠",
     xp,
     rank: currentRank.name,
@@ -34,7 +37,7 @@ export const Leaderboard: React.FC = () => {
   };
 
   // Combine and sort
-  const allScholars = [...BENCHMARK_PLAYERS, currentUserScholar].sort((a, b) => {
+  const allScholars = [...BENCHMARK_PLAYERS, ...(shouldShowUser ? [currentUserScholar] : [])].sort((a, b) => {
     if (activeCategory === "xp") return b.xp - a.xp;
     if (activeCategory === "stages") return b.stages - a.stages;
     if (activeCategory === "streak") return b.streak - a.streak;

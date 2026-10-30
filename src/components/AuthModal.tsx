@@ -34,7 +34,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState<string | null>(null);
 
-  const { setProfile } = useEduStore();
+  const { setProfile, setGuestSession } = useEduStore();
 
   if (!isOpen) return null;
 
@@ -162,6 +162,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleGuestContinue = () => {
     sound.playClick();
+    setGuestSession();
     onClose();
     if (onSuccess) onSuccess();
   };

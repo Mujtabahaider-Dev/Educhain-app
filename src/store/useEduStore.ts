@@ -12,7 +12,8 @@ interface EduStoreState extends UserState {
   quizHistory: QuizAttemptRecord[];
   
   // Actions
-  setProfile: (name: string, avatar: string, grade: GradeType) => void;
+  setProfile: (name: string, avatar: string, grade: GradeType, isGuest?: boolean) => void;
+  setGuestSession: () => void;
   signOut: () => void;
   updateSettings: (settings: Partial<UserState["settings"]>) => void;
   addXp: (amount: number) => void;
@@ -41,13 +42,14 @@ interface EduStoreState extends UserState {
 
 const DEFAULT_STATE: UserState = {
   id: null,
-  name: "Scholar",
-  avatar: "🧠",
+  name: "Guest Scholar",
+  avatar: "👤",
   grade: "grade_9",
+  isGuest: true,
   xp: 0,
-  currentStreak: 1,
-  longestStreak: 1,
-  lastActiveDate: new Date().toISOString().split("T")[0],
+  currentStreak: 0,
+  longestStreak: 0,
+  lastActiveDate: null,
   completedStages: [],
   unlockedStages: [1, 7, 13, 19], // Initial stage unlocked for each subject
   bestScores: {},
@@ -77,16 +79,29 @@ export const useEduStore = create<EduStoreState>()(
       mistakes: [],
       quizHistory: [],
 
-      setProfile: (name, avatar, grade) => {
-        set({ name, avatar, grade });
+      setProfile: (name, avatar, grade, isGuest = false) => {
+        set({ name, avatar, grade, isGuest });
+      },
+
+      setGuestSession: () => {
+        set({
+          ...DEFAULT_STATE,
+          name: "Guest Explorer",
+          avatar: "🧭",
+          isGuest: true,
+          mistakes: [],
+          quizHistory: [],
+        });
       },
 
       signOut: () => {
         set({
-          id: null,
-          name: "Scholar",
-          avatar: "🧠",
-          grade: "grade_9",
+          ...DEFAULT_STATE,
+          name: "Guest Explorer",
+          avatar: "👤",
+          isGuest: true,
+          mistakes: [],
+          quizHistory: [],
         });
       },
 
