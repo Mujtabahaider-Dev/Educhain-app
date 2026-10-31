@@ -40,32 +40,32 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
       
       {/* 1. Hero Next Recommended Quest Card */}
       {nextStage && (
-        <div className="relative overflow-hidden rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] p-5 sm:p-7 shadow-sm dark:shadow-none transition-all hover:border-neutral-300 dark:hover:border-white/20">
+        <div className="relative overflow-hidden rounded-3xl border border-black/[0.08] dark:border-white/[0.08] bg-white dark:bg-[#0c0c0e] p-6 sm:p-8 shadow-sm transition-all hover:border-black/15 dark:hover:border-white/15">
           
-          {/* Subtle gradient backdrop */}
+          {/* Subtle gradient glow */}
           <div 
-            className="absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl opacity-10 pointer-events-none -mr-20 -mt-20"
+            className="absolute -top-20 -right-20 w-80 h-80 rounded-full blur-3xl opacity-10 pointer-events-none"
             style={{ backgroundColor: nextSubMeta?.color || "#38bdf8" }}
           />
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div className="max-w-xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.04] text-xs font-mono text-neutral-700 dark:text-neutral-300 mb-2.5">
-                <span className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: nextSubMeta?.color || "#38bdf8" }} />
-                <span>Next Recommended Quest</span>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="max-w-xl space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-black/[0.06] dark:border-white/[0.08] bg-neutral-100/80 dark:bg-white/[0.04] text-[11px] font-mono text-neutral-700 dark:text-neutral-300">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: nextSubMeta?.color || "#38bdf8" }} />
+                <span className="font-semibold uppercase tracking-wider">Next Recommended Quest</span>
               </div>
 
-              <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
+              <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-neutral-400">
                 <span>{nextSubMeta?.name}</span>
                 <span>•</span>
                 <span>Stage {nextStage.subjectStageNumber || 1}</span>
               </div>
 
-              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-900 dark:text-white mb-1.5">
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-950 dark:text-white leading-tight">
                 {nextStage.title}
               </h2>
 
-              <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-clamp-1 leading-relaxed">
+              <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
                 {nextStage.learningObjective || nextStage.description}
               </p>
             </div>
@@ -73,9 +73,9 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
             <div className="flex items-center gap-3 shrink-0">
               <button
                 onClick={handleStartNext}
-                className="w-full sm:w-auto btn-vercel-primary px-6 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2.5 shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full sm:w-auto btn-vercel-primary px-7 py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2.5 shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
-                <Play className="w-4 h-4 fill-current" />
+                <Play className="w-3.5 h-3.5 fill-current" />
                 <span>Continue Quest (5 min)</span>
               </button>
             </div>
@@ -84,7 +84,7 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
       )}
 
       {/* 2. Dead-Simple 1-Click Subject Switcher (Dynamic: Includes Admin Created Subjects) */}
-      <div className="pt-2">
+      <div className="pt-1">
         <div className="flex flex-wrap items-center gap-2">
           {allSubjects.map((sub) => {
             const isSelected = selectedSubject === sub.id;
@@ -100,18 +100,18 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
                   sound.playClick();
                   onSelectSubject(sub.id);
                 }}
-                className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 ${
+                className={`px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all flex items-center gap-2.5 ${
                   isSelected
-                    ? "bg-black dark:bg-white text-white dark:text-black shadow-sm ring-1 ring-black dark:ring-white"
-                    : "bg-white dark:bg-[#0a0a0a] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-white/10 hover:text-black dark:hover:text-white hover:border-neutral-300"
+                    ? "bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 shadow-sm"
+                    : "bg-white dark:bg-[#0c0c0e] text-neutral-600 dark:text-neutral-400 border border-black/[0.06] dark:border-white/[0.08] hover:text-neutral-950 dark:hover:text-white hover:border-black/15 dark:hover:border-white/15"
                 }`}
               >
                 <span className="text-base">{sub.icon}</span>
                 <span>{sub.name}</span>
                 <span
-                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold ${
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
                     isSelected
-                      ? "bg-white/20 dark:bg-black/15 text-white dark:text-black"
+                      ? "bg-white/20 dark:bg-black/15 text-white dark:text-neutral-950"
                       : "bg-neutral-100 dark:bg-white/[0.06] text-neutral-500"
                   }`}
                 >

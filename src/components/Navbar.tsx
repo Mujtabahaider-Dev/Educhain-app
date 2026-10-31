@@ -83,7 +83,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isDark = settings.theme === "dark";
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-neutral-200 dark:border-white/[0.08] bg-white/80 dark:bg-black/80 backdrop-blur-md transition-colors duration-200">
+    <header className="sticky top-0 z-40 w-full border-b border-black/[0.06] dark:border-white/[0.08] bg-white/75 dark:bg-black/75 backdrop-blur-xl transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
         {/* Brand / Logo */}
@@ -92,22 +92,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => { setActiveTab("map"); sound.playClick(); }}
             className="flex items-center gap-2.5 text-left focus:outline-none group"
           >
-            <div className="w-8 h-8 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-black text-sm shadow-sm group-hover:scale-105 transition-transform">
-              ⛓️
+            <div className="w-8 h-8 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 flex items-center justify-center font-black text-sm shadow-sm group-hover:scale-105 transition-all">
+              <span className="text-sm">⚡</span>
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <span className="font-bold tracking-tight text-neutral-900 dark:text-white text-base">EduChain</span>
-                <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-white/[0.03]">
+                <span className="font-bold tracking-tight text-neutral-950 dark:text-white text-base">EduChain</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full border border-black/[0.08] dark:border-white/[0.12] text-neutral-600 dark:text-neutral-400 bg-neutral-100/80 dark:bg-white/[0.04] font-semibold">
                   v2.0
                 </span>
               </div>
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 -mt-0.5 hidden sm:inline">Learn • Connect • Unlock</span>
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 -mt-0.5 hidden sm:inline font-normal">Learn • Connect • Unlock</span>
             </div>
           </button>
 
-          {/* Navigation Tabs (Review Errors moved inside My Progress) */}
-          <nav className="hidden md:flex items-center gap-1 border-l border-neutral-200 dark:border-white/[0.08] pl-6 ml-2">
+          {/* Navigation Tabs */}
+          <nav className="hidden md:flex items-center gap-1 border-l border-neutral-200/80 dark:border-white/[0.08] pl-5 ml-1">
             {[
               { id: "map", label: "My Quests", icon: BookOpen },
               { id: "leaderboard", label: "Leaderboard", icon: Trophy },
@@ -115,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id: "analytics", 
                 label: "My Progress", 
                 icon: BarChart3, 
-                badge: pendingMistakes > 0 ? `${pendingMistakes} errors` : null 
+                badge: pendingMistakes > 0 ? `${pendingMistakes}` : null 
               },
             ].map((item) => {
               const Icon = item.icon;
@@ -127,16 +127,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                     setActiveTab(item.id);
                     sound.playClick();
                   }}
-                  className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  className={`relative flex items-center gap-2 px-3.5 py-1.5 text-xs rounded-xl transition-all ${
                     isActive
-                      ? "text-neutral-900 dark:text-white bg-neutral-100 dark:bg-white/[0.08] border border-neutral-200 dark:border-white/15 shadow-sm dark:shadow-none font-semibold"
-                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-white/[0.03]"
+                      ? "text-neutral-950 dark:text-white bg-neutral-100 dark:bg-white/[0.09] shadow-xs font-semibold"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-950 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-white/[0.03] font-medium"
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
                   <span>{item.label}</span>
                   {item.badge !== null && item.badge !== undefined && (
-                    <span className="ml-1 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/20 dark:border-amber-500/30">
+                    <span className="ml-0.5 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                       {item.badge}
                     </span>
                   )}
@@ -147,11 +147,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Link
               href="/battle"
               onClick={() => sound.playClick()}
-              className="relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-white/[0.03]"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all text-neutral-600 dark:text-neutral-400 hover:text-neutral-950 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-white/[0.03]"
             >
               <Swords className="w-3.5 h-3.5 text-rose-500" />
               <span>Multiplayer</span>
-              <span className="ml-0.5 text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+              <span className="ml-0.5 text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                 LIVE
               </span>
             </Link>
@@ -165,36 +165,36 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={handleSimulateSync}
             title="Supabase Cloud Status"
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
           >
             <Cloud className={`w-3.5 h-3.5 ${syncing ? "animate-spin text-cyan-500" : "text-emerald-500 dark:text-emerald-400"}`} />
-            <span>{syncing ? "Syncing..." : "Cloud Live"}</span>
+            <span>{syncing ? "Syncing..." : "Cloud Active"}</span>
           </button>
 
           {/* Streak Counter */}
           <div 
             title={`Current Streak: ${currentStreak} days`}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-neutral-200 dark:border-white/[0.08] bg-neutral-50 dark:bg-white/[0.02] text-xs font-mono text-orange-600 dark:text-orange-400"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-neutral-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0c0e] text-xs font-mono text-orange-600 dark:text-orange-400 font-bold shadow-xs"
           >
             <Flame className="w-3.5 h-3.5 fill-orange-500/20 text-orange-500 dark:text-orange-400" />
-            <span className="font-semibold">{currentStreak}d</span>
+            <span>{currentStreak}d</span>
           </div>
 
           {/* XP Badge */}
           <div 
             title={`Total Experience Points: ${xp} XP`}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-neutral-200 dark:border-white/[0.08] bg-neutral-50 dark:bg-white/[0.02] text-xs font-mono text-amber-600 dark:text-amber-300"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl border border-neutral-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0c0e] text-xs font-mono text-amber-600 dark:text-amber-400 font-bold shadow-xs"
           >
-            <Zap className="w-3.5 h-3.5 fill-amber-500/20 text-amber-500 dark:text-amber-300" />
-            <span className="font-semibold">{xp} XP</span>
+            <Zap className="w-3.5 h-3.5 fill-amber-500/20 text-amber-500 dark:text-amber-400" />
+            <span>{xp} XP</span>
           </div>
 
-          {/* Theme Switcher Toggle (White Mode / Dark Mode) */}
+          {/* Theme Switcher Toggle */}
           <button
             onClick={handleToggleTheme}
             aria-label={isDark ? "Switch to White / Light Mode" : "Switch to Dark Mode"}
-            title={isDark ? "Switch to White Mode" : "Switch to Dark Mode"}
-            className="p-1.5 rounded-md border border-neutral-200 dark:border-white/[0.08] bg-neutral-50 dark:bg-white/[0.02] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-300 dark:hover:border-white/20 transition-colors"
+            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className="p-1.5 rounded-xl border border-neutral-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0c0e] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors shadow-xs"
           >
             {isDark ? (
               <Sun className="w-4 h-4 text-amber-400" />
@@ -208,36 +208,36 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={toggleSound}
             aria-label={settings.soundEnabled ? "Mute Sound FX" : "Unmute Sound FX"}
             title={settings.soundEnabled ? "Mute Web Audio API" : "Unmute Web Audio API"}
-            className="p-1.5 rounded-md border border-neutral-200 dark:border-white/[0.08] bg-neutral-50 dark:bg-white/[0.02] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-300 dark:hover:border-white/20 transition-colors"
+            className="p-1.5 rounded-xl border border-neutral-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0c0e] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors shadow-xs"
           >
             {settings.soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-neutral-400 dark:text-neutral-600" />}
           </button>
 
-          {/* If guest and not signed in, show a subtle Login button */}
+          {/* Login button if guest */}
           {!hasSession && isGuest && onOpenAuth && (
             <button
               onClick={() => { sound.playClick(); onOpenAuth("signin"); }}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
             >
               <LogIn className="w-3.5 h-3.5" />
               <span>Login</span>
             </button>
           )}
 
-          {/* Scholar Profile / Avatar Button (Opens Account Popup which contains Sign Out) */}
+          {/* Scholar Profile / Avatar Button */}
           <button
             onClick={() => {
               if (onOpenProfile) onOpenProfile();
               sound.playClick();
             }}
             title="Account Details & Settings"
-            className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-neutral-200 dark:border-white/[0.12] bg-neutral-50 dark:bg-white/[0.04] hover:bg-neutral-100 dark:hover:bg-white/[0.08] hover:border-neutral-300 dark:hover:border-white/25 transition-all text-xs font-medium"
+            className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-neutral-200/80 dark:border-white/[0.12] bg-white dark:bg-[#0c0c0e] hover:border-neutral-300 dark:hover:border-white/20 transition-all text-xs font-medium shadow-xs"
           >
             <span className="text-sm">{avatar || "👤"}</span>
-            <span className="hidden sm:inline font-mono text-neutral-800 dark:text-neutral-200 font-semibold">
+            <span className="hidden sm:inline font-mono text-neutral-800 dark:text-neutral-200 font-semibold text-xs">
               {name || (isGuest ? "Guest Explorer" : "Scholar")}
             </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-white/10 text-neutral-700 dark:text-neutral-300">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-300 font-mono font-medium">
               {isGuest && xp === 0 ? "Guest" : currentRank.name}
             </span>
           </button>

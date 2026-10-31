@@ -259,12 +259,12 @@ export default function Home() {
                   {subjectGroups.map((group) => (
                     <section key={group.subject} className="space-y-6">
                       
-                      {/* Single, Clean Subject Header (No Duplicate) */}
-                      <div className="flex items-center justify-between pb-3.5 border-b border-neutral-200 dark:border-white/10">
+                      {/* Single, Clean Subject Header */}
+                      <div className="flex items-center justify-between pb-4 border-b border-black/[0.08] dark:border-white/[0.08]">
                         <div className="flex items-center gap-3">
-                          <span className="text-3xl">{group.subjectMeta.icon}</span>
+                          <span className="text-2xl p-2 rounded-xl bg-neutral-100 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06]">{group.subjectMeta.icon}</span>
                           <div>
-                            <h2 className="text-lg sm:text-xl font-bold text-neutral-900 dark:text-white">
+                            <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white tracking-tight">
                               {group.subjectMeta.name}
                             </h2>
                             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
@@ -272,7 +272,7 @@ export default function Home() {
                             </p>
                           </div>
                         </div>
-                        <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-full border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.03] text-neutral-600 dark:text-neutral-400">
+                        <span className="text-[11px] font-mono font-medium px-2.5 py-1 rounded-full border border-black/[0.06] dark:border-white/[0.08] bg-neutral-50 dark:bg-white/[0.02] text-neutral-600 dark:text-neutral-400">
                           {group.totalStages} Stages
                         </span>
                       </div>
@@ -280,15 +280,15 @@ export default function Home() {
                       {/* Chapters inside this Subject */}
                       <div className="space-y-8 pl-1 sm:pl-2">
                         {group.chapters.map((chapter) => (
-                          <div key={chapter.chapterName} className="space-y-3.5">
+                          <div key={chapter.chapterName} className="space-y-4">
                             
                             {/* Chapter Header: Like "Chapter One • Matrices and Determinants" */}
-                            <div className="flex items-center justify-between pb-2 border-b border-neutral-200/60 dark:border-white/[0.06]">
+                            <div className="flex items-center justify-between pb-2.5 border-b border-black/[0.05] dark:border-white/[0.06]">
                               <div className="flex items-center gap-2.5">
-                                <span className="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider bg-black dark:bg-white text-white dark:text-black shadow-xs">
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-black dark:bg-white text-white dark:text-black">
                                   Chapter {chapter.chapterWord}
                                 </span>
-                                <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white">
+                                <h3 className="text-sm sm:text-[15px] font-semibold text-neutral-900 dark:text-white">
                                   {chapter.chapterName}
                                 </h3>
                               </div>

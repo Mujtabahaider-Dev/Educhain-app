@@ -3,15 +3,15 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #111827;
+  --background: #fafafa;
+  --foreground: #09090b;
   --surface: #ffffff;
-  --surface-hover: #f9fafb;
-  --surface-elevated: #f3f4f6;
-  --border: #e5e7eb;
-  --border-subtle: #f3f4f6;
-  --muted: #6b7280;
-  --muted-dark: #9ca3af;
+  --surface-hover: #f4f4f5;
+  --surface-elevated: #ffffff;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-subtle: rgba(0, 0, 0, 0.04);
+  --muted: #71717a;
+  --muted-dark: #a1a1aa;
   --accent-cyan: #0284c7;
   --accent-blue: #0070f3;
   --accent-purple: #7928ca;
@@ -23,17 +23,17 @@
 
 .dark {
   --background: #000000;
-  --foreground: #ededed;
-  --surface: #0a0a0a;
-  --surface-hover: #121212;
-  --surface-elevated: #161616;
-  --border: rgba(255, 255, 255, 0.12);
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --muted: #888888;
-  --muted-dark: #555555;
-  --accent-cyan: #00f2fe;
+  --foreground: #f4f4f5;
+  --surface: #0a0a0c;
+  --surface-hover: #121215;
+  --surface-elevated: #16161a;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --muted: #a1a1aa;
+  --muted-dark: #52525b;
+  --accent-cyan: #38bdf8;
   --accent-blue: #0070f3;
-  --accent-purple: #7928ca;
+  --accent-purple: #a78bfa;
   --math: #38bdf8;
   --science: #34d399;
   --english: #a78bfa;
@@ -53,29 +53,32 @@ body {
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* Vercel Grid & Radial Glow utilities */
 .vercel-grid {
   background-image: 
-    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
 .dark .vercel-grid {
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
 }
 
 .vercel-glow {
-  background: radial-gradient(600px circle at top center, rgba(0, 112, 243, 0.08), transparent 70%);
+  background: radial-gradient(800px circle at 50% 0%, rgba(56, 189, 248, 0.05), transparent 70%);
 }
 
 .dark .vercel-glow {
-  background: radial-gradient(600px circle at top center, rgba(255, 255, 255, 0.08), transparent 70%);
+  background: radial-gradient(800px circle at 50% 0%, rgba(255, 255, 255, 0.05), transparent 70%);
 }
 
 .vercel-border {
@@ -84,44 +87,49 @@ body {
 
 /* Vercel Button styles */
 .btn-vercel-primary {
-  background-color: #000000;
+  background-color: #09090b;
   color: #ffffff;
-  font-weight: 500;
-  transition: all 0.15s ease-in-out;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .btn-vercel-primary:hover {
-  background-color: #262626;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  background-color: #27272a;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 }
 
 .dark .btn-vercel-primary {
-  background-color: #ededed;
-  color: #000000;
+  background-color: #ffffff;
+  color: #09090b;
 }
 .dark .btn-vercel-primary:hover {
-  background-color: #ffffff;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+  background-color: #f4f4f5;
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.2);
 }
 
 .btn-vercel-secondary {
   background-color: #ffffff;
-  color: #111827;
-  border: 1px solid #e5e7eb;
-  transition: all 0.15s ease-in-out;
+  color: #09090b;
+  border: 1px solid var(--border);
+  font-weight: 500;
+  border-radius: 0.75rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .btn-vercel-secondary:hover {
-  background-color: #f9fafb;
-  border-color: #d1d5db;
+  background-color: #f4f4f5;
+  border-color: rgba(0, 0, 0, 0.16);
+  transform: translateY(-1px);
 }
 
 .dark .btn-vercel-secondary {
-  background-color: #111111;
-  color: #ededed;
+  background-color: #0d0d10;
+  color: #f4f4f5;
   border: 1px solid var(--border);
 }
 .dark .btn-vercel-secondary:hover {
-  background-color: #1a1a1a;
-  border-color: rgba(255, 255, 255, 0.24);
+  background-color: #17171c;
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 /* Custom modern scrollbars */
