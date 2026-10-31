@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { StageCard } from "@/components/StageCard";
 import { QuizModal } from "@/components/QuizModal";
@@ -12,10 +13,10 @@ import { LandingPage } from "@/components/LandingPage";
 import { HowItWorksBanner } from "@/components/HowItWorksBanner";
 import { NextQuestHero } from "@/components/NextQuestHero";
 import { useEduStore } from "@/store/useEduStore";
-import { STAGES_DATA } from "@/data/curriculum";
+import { useCurriculumStore } from "@/store/useCurriculumStore";
 import { supabase } from "@/lib/supabase/client";
 import { GradeType, Stage, SubjectType } from "@/types/curriculum";
-import { GRADE_SHORT_LABELS, SUBJECT_METADATA } from "@/data/constants";
+import { GRADE_SHORT_LABELS } from "@/data/constants";
 import { sound } from "@/lib/audio";
 
 const CHAPTER_WORDS = [
@@ -32,7 +33,13 @@ interface ChapterGroup {
 
 interface SubjectGroup {
   subject: SubjectType;
-  subjectMeta: typeof SUBJECT_METADATA[SubjectType];
+  subjectMeta: {
+    id: string;
+    name: string;
+    icon: string;
+    description: string;
+    color: string;
+  };
   chapters: ChapterGroup[];
   totalStages: number;
 }
@@ -56,6 +63,14 @@ export default function Home() {
     setProfile,
     loadCloudProfile,
   } = useEduStore();
+
+  const { getAllStages, getAllSubjects, syncWithSupabase } = useCurriculumStore();
+  const allStages = getAllStages();
+  const allSubjects = getAllSubjects();
+
+  useEffect(() => {
+    syncWithSupabase();
+  }, [syncWithSupabase]);
 
   // Listen for Supabase Auth state changes (e.g. Email confirmation or session restore)
   useEffect(() => {
@@ -126,13 +141,13 @@ export default function Home() {
     }
   }, [settings.theme]);
 
-  // Filter stages by Grade and selected Subject
+  // Filter stages by Grade and selected Subject (Merged from base + custom stages)
   const filteredStages = useMemo(() => {
-    return STAGES_DATA.filter((stage) => {
+    return allStages.filter((stage) => {
       const matchesGrade = stage.grade === grade || (grade === "grade_9" && stage.grade === "grade_9");
       return matchesGrade && stage.subject === selectedSubject;
     });
-  }, [grade, selectedSubject]);
+  }, [allStages, grade, selectedSubject]);
 
   // Classify by Subject -> Then Chapter (e.g. Chapter One) -> Then Stages
   const subjectGroups = useMemo(() => {
@@ -140,6 +155,14 @@ export default function Home() {
     if (subStages.length === 0) return [];
 
     const subKey = selectedSubject as SubjectType;
+    const currentSubjectObj = allSubjects.find((s) => s.id === subKey) || {
+      id: subKey,
+      name: subKey.replace("_", " "),
+      icon: "📚",
+      description: "Curriculum Track",
+      color: "#38bdf8",
+    };
+
     const chaptersMap = new Map<string, Stage[]>();
 
     subStages.forEach((stage) => {
@@ -159,15 +182,15 @@ export default function Home() {
 
     return [{
       subject: subKey,
-      subjectMeta: SUBJECT_METADATA[subKey] || SUBJECT_METADATA.computer_science,
+      subjectMeta: currentSubjectObj,
       chapters,
       totalStages: subStages.length,
     }];
-  }, [filteredStages, selectedSubject]);
+  }, [filteredStages, selectedSubject, allSubjects]);
 
   const handleNextStage = () => {
     if (!selectedStage || !selectedStage.subject) return;
-    const currentSubjectStages = STAGES_DATA.filter((s) => s.subject === selectedStage.subject);
+    const currentSubjectStages = allStages.filter((s) => s.subject === selectedStage.subject);
     const nextStage = currentSubjectStages.find(
       (s) => s.subjectStageNumber && selectedStage.subjectStageNumber && s.subjectStageNumber === selectedStage.subjectStageNumber + 1
     );
@@ -223,9 +246,9 @@ export default function Home() {
                 {/* 1. Quick Onboarding 3-Step Banner (Dismissible) */}
                 <HowItWorksBanner />
 
-                {/* 2. Sleek Next Quest Hero & 4 Subject Selectors (All Quests tab removed) */}
+                {/* 2. Sleek Next Quest Hero & Dynamic Subject Selectors */}
                 <NextQuestHero
-                  stages={STAGES_DATA.filter((s) => s.grade === grade || (grade === "grade_9" && s.grade === "grade_9"))}
+                  stages={allStages.filter((s) => s.grade === grade || (grade === "grade_9" && s.grade === "grade_9"))}
                   selectedSubject={selectedSubject}
                   onSelectSubject={(sub) => setSelectedSubject(sub)}
                   onStartStage={(stage) => setSelectedStage(stage)}
@@ -333,6 +356,12 @@ export default function Home() {
               </div>
 
               <div className="flex items-center gap-3">
+                <Link
+                  href="/admin"
+                  className="px-2.5 py-1 rounded-md border border-neutral-200 dark:border-white/10 hover:border-neutral-400 dark:hover:border-white/30 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors flex items-center gap-1.5"
+                >
+                  <span>Admin Studio ⚙️</span>
+                </Link>
                 <button
                   onClick={() => setViewMode("landing")}
                   className="hover:text-neutral-900 dark:hover:text-white transition-colors"

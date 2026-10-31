@@ -2,8 +2,8 @@
 
 import React from "react";
 import { Stage, SubjectType } from "@/types/curriculum";
-import { SUBJECT_METADATA } from "@/data/constants";
 import { useEduStore } from "@/store/useEduStore";
+import { useCurriculumStore } from "@/store/useCurriculumStore";
 import { sound } from "@/lib/audio";
 import { Play } from "lucide-react";
 
@@ -21,19 +21,19 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
   onStartStage,
 }) => {
   const { completedStages, subjectProgress } = useEduStore();
+  const { getAllSubjects } = useCurriculumStore();
+  const allSubjects = getAllSubjects();
 
   // Find the student's next recommended stage: first uncompleted stage
   const nextStage = stages.find((s) => !completedStages.includes(s.id)) || stages[0];
 
-  const nextMeta = nextStage?.subject ? SUBJECT_METADATA[nextStage.subject] : SUBJECT_METADATA.computer_science;
+  const nextSubMeta = allSubjects.find((s) => s.id === nextStage?.subject) || allSubjects[0];
 
   const handleStartNext = () => {
     if (!nextStage) return;
     sound.playClick();
     onStartStage(nextStage);
   };
-
-  const subjectKeys: SubjectType[] = ["computer_science", "science", "mathematics", "english"];
 
   return (
     <div className="space-y-6 mb-8">
@@ -45,18 +45,18 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
           {/* Subtle gradient backdrop */}
           <div 
             className="absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl opacity-10 pointer-events-none -mr-20 -mt-20"
-            style={{ backgroundColor: nextMeta.color }}
+            style={{ backgroundColor: nextSubMeta?.color || "#38bdf8" }}
           />
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
             <div className="max-w-xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.04] text-xs font-mono text-neutral-700 dark:text-neutral-300 mb-2.5">
-                <span className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: nextMeta.color }} />
+                <span className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: nextSubMeta?.color || "#38bdf8" }} />
                 <span>Next Recommended Quest</span>
               </div>
 
               <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
-                <span>{nextMeta.name}</span>
+                <span>{nextSubMeta?.name}</span>
                 <span>•</span>
                 <span>Stage {nextStage.subjectStageNumber || 1}</span>
               </div>
@@ -83,23 +83,22 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
         </div>
       )}
 
-      {/* 2. Dead-Simple 1-Click Subject Switcher (Without "All Quests" tab) */}
+      {/* 2. Dead-Simple 1-Click Subject Switcher (Dynamic: Includes Admin Created Subjects) */}
       <div className="pt-2">
         <div className="flex flex-wrap items-center gap-2">
-          {subjectKeys.map((subKey) => {
-            const meta = SUBJECT_METADATA[subKey];
-            const isSelected = selectedSubject === subKey;
-            const subProg = subjectProgress[subKey] || { completedStages: [] };
-            const subStages = stages.filter((s) => s.subject === subKey);
+          {allSubjects.map((sub) => {
+            const isSelected = selectedSubject === sub.id;
+            const subProg = subjectProgress[sub.id as SubjectType] || { completedStages: [] };
+            const subStages = stages.filter((s) => s.subject === sub.id);
             const completedCount = subProg.completedStages.length;
             const totalCount = subStages.length || 6;
 
             return (
               <button
-                key={subKey}
+                key={sub.id}
                 onClick={() => {
                   sound.playClick();
-                  onSelectSubject(subKey);
+                  onSelectSubject(sub.id);
                 }}
                 className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 ${
                   isSelected
@@ -107,8 +106,8 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
                     : "bg-white dark:bg-[#0a0a0a] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-white/10 hover:text-black dark:hover:text-white hover:border-neutral-300"
                 }`}
               >
-                <span className="text-base">{meta.icon}</span>
-                <span>{meta.name}</span>
+                <span className="text-base">{sub.icon}</span>
+                <span>{sub.name}</span>
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold ${
                     isSelected
