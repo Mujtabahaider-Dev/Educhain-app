@@ -257,8 +257,8 @@ export default function Home() {
                     </h2>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                       {activeSubjectMeta 
-                        ? `Explore chapters in ${activeSubjectMeta.name}. Complete each stage to unlock the next link.` 
-                        : "Curriculum structured by Subject and Chapter. Complete stages sequentially."}
+                        ? `Explore chapters in ${activeSubjectMeta.name}. Practice any chapter directly.` 
+                        : "Curriculum structured by Subject and Chapter. Practice any chapter directly."}
                     </p>
                   </div>
 
@@ -327,7 +327,7 @@ export default function Home() {
                                   bestScores: {},
                                 };
 
-                                const isUnlocked = subProgress.unlockedStages.includes(stage.id) || unlockedStages.includes(stage.id);
+                                const isUnlocked = true; // All chapters and stages are open to practice directly
                                 const isCompleted = subProgress.completedStages.includes(stage.id) || completedStages.includes(stage.id);
                                 const stageBestScore = subProgress.bestScores[stage.id] || bestScores[stage.id] || 0;
 

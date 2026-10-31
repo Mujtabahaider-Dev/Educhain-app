@@ -20,15 +20,10 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
   onSelectSubject,
   onStartStage,
 }) => {
-  const { completedStages, unlockedStages, subjectProgress } = useEduStore();
+  const { completedStages, subjectProgress } = useEduStore();
 
-  // Find the student's next recommended stage:
-  // First unlocked stage that is not yet completed
-  const nextStage = stages.find((s) => {
-    const isUnlocked = unlockedStages.includes(s.id);
-    const isCompleted = completedStages.includes(s.id);
-    return isUnlocked && !isCompleted;
-  }) || stages[0];
+  // Find the student's next recommended stage: first uncompleted stage
+  const nextStage = stages.find((s) => !completedStages.includes(s.id)) || stages[0];
 
   const nextMeta = nextStage?.subject ? SUBJECT_METADATA[nextStage.subject] : SUBJECT_METADATA.mathematics;
 
