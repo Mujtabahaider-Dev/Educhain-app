@@ -60,6 +60,7 @@ export const DEFAULT_SUBJECTS: CustomSubject[] = [
 interface CurriculumStoreState {
   customSubjects: CustomSubject[];
   customStages: Stage[];
+  deletedSubjectIds: string[];
   isLoading: boolean;
   cloudSyncStatus: "checking" | "connected" | "disconnected";
   cloudSyncMessage?: string;
@@ -73,6 +74,8 @@ interface CurriculumStoreState {
   updateStage: (stageId: string | number, updatedData: Partial<Stage>) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
   deleteStage: (stageId: string | number) => Promise<{ success: boolean; error?: string }>;
   deleteSubject: (subjectId: string) => Promise<{ success: boolean; error?: string }>;
+  restoreSubject: (subjectId: string) => Promise<{ success: boolean }>;
+  restoreAllDefaultSubjects: () => void;
   syncWithSupabase: () => Promise<void>;
   getAllSubjects: () => CustomSubject[];
   getAllStages: () => Stage[];
@@ -83,6 +86,7 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
     (set, get) => ({
       customSubjects: [],
       customStages: [],
+      deletedSubjectIds: [],
       isLoading: false,
       cloudSyncStatus: "checking",
       cloudSyncMessage: undefined,
@@ -159,17 +163,21 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
       },
 
       getAllSubjects: () => {
-        const { customSubjects } = get();
+        const { customSubjects, deletedSubjectIds = [] } = get();
+        const deletedSet = new Set(deletedSubjectIds);
         const customIds = new Set(customSubjects.map((s) => s.id));
-        const filteredDefaults = DEFAULT_SUBJECTS.filter((s) => !customIds.has(s.id));
-        return [...filteredDefaults, ...customSubjects];
+        const filteredDefaults = DEFAULT_SUBJECTS.filter((s) => !customIds.has(s.id) && !deletedSet.has(s.id));
+        const activeCustom = customSubjects.filter((s) => !deletedSet.has(s.id));
+        return [...filteredDefaults, ...activeCustom];
       },
 
       getAllStages: () => {
-        const { customStages } = get();
+        const { customStages, deletedSubjectIds = [] } = get();
+        const deletedSet = new Set(deletedSubjectIds);
         const customIds = new Set(customStages.map((s) => String(s.id)));
-        const filteredDefaults = STAGES_DATA.filter((s) => !customIds.has(String(s.id)));
-        return [...filteredDefaults, ...customStages];
+        const filteredDefaults = STAGES_DATA.filter((s) => !customIds.has(String(s.id)) && (!s.subject || !deletedSet.has(s.subject)));
+        const activeCustom = customStages.filter((s) => !s.subject || !deletedSet.has(s.subject));
+        return [...filteredDefaults, ...activeCustom];
       },
 
       addSubject: async (subject: CustomSubject) => {
@@ -381,6 +389,7 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
 
       deleteSubject: async (subjectId: string) => {
         set((state) => ({
+          deletedSubjectIds: Array.from(new Set([...(state.deletedSubjectIds || []), subjectId])),
           customSubjects: state.customSubjects.filter((s) => s.id !== subjectId),
           customStages: state.customStages.filter((s) => s.subject !== subjectId),
         }));
@@ -393,6 +402,17 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
         }
 
         return { success: true };
+      },
+
+      restoreSubject: async (subjectId: string) => {
+        set((state) => ({
+          deletedSubjectIds: (state.deletedSubjectIds || []).filter((id) => id !== subjectId),
+        }));
+        return { success: true };
+      },
+
+      restoreAllDefaultSubjects: () => {
+        set({ deletedSubjectIds: [] });
       },
 
       syncWithSupabase: async () => {

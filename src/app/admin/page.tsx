@@ -40,7 +40,8 @@ import {
   Users,
   LogOut,
   Search,
-  Filter
+  Filter,
+  RotateCcw
 } from "lucide-react";
 
 const COLOR_PRESETS = [
@@ -135,6 +136,8 @@ export default function AdminPage() {
     addStage, 
     deleteStage, 
     deleteSubject,
+    deletedSubjectIds,
+    restoreAllDefaultSubjects,
     syncWithSupabase,
     checkSupabaseHealth,
     pushLocalToCloud,
@@ -1601,9 +1604,30 @@ export default function AdminPage() {
 
             {/* List of Existing Subjects */}
             <div className="p-6 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-4">
-                Active Subjects ({allSubjects.length})
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    Active Subjects ({allSubjects.length})
+                  </h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Click Edit to customize icons &amp; colors, or Delete to remove any subject from the curriculum.
+                  </p>
+                </div>
+
+                {deletedSubjectIds && deletedSubjectIds.length > 0 && (
+                  <button
+                    onClick={() => {
+                      sound.playClick();
+                      restoreAllDefaultSubjects();
+                      showNotification("Restored default core subjects!");
+                    }}
+                    className="btn-vercel-secondary text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-bold"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Restore Defaults ({deletedSubjectIds.length} hidden)</span>
+                  </button>
+                )}
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {allSubjects.map((sub) => {
@@ -1646,24 +1670,21 @@ export default function AdminPage() {
                           <Edit3 className="w-3.5 h-3.5" />
                           <span>Edit</span>
                         </button>
-                        {isCustom ? (
-                          <button
-                            onClick={() => {
-                              if (confirm(`Delete subject "${sub.name}" and all its custom stages?`)) {
-                                deleteSubject(sub.id);
-                                sound.playClick();
-                                showNotification(`Subject "${sub.name}" deleted.`);
-                              }
-                            }}
-                            className="text-xs text-rose-500 hover:text-rose-700 font-mono"
-                          >
-                            Delete
-                          </button>
-                        ) : (
-                          <span className="text-[10px] font-mono text-neutral-400">
-                            Core System
-                          </span>
-                        )}
+                        
+                        <button
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete subject "${sub.name}"? All ${stageCount} stages in this subject will be removed.`)) {
+                              deleteSubject(sub.id);
+                              sound.playClick();
+                              showNotification(`Subject "${sub.name}" deleted successfully.`);
+                            }
+                          }}
+                          className="text-xs text-rose-500 hover:text-rose-700 font-mono flex items-center gap-1 font-semibold"
+                          title="Delete Subject"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
                       </div>
                     </div>
                   );
