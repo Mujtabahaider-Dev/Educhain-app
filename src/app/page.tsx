@@ -40,7 +40,7 @@ interface SubjectGroup {
 export default function Home() {
   const [viewMode, setViewMode] = useState<"landing" | "app">("landing");
   const [activeTab, setActiveTab] = useState<string>("map");
-  const [selectedSubject, setSelectedSubject] = useState<string>("all");
+  const [selectedSubject, setSelectedSubject] = useState<string>("computer_science");
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
@@ -130,53 +130,40 @@ export default function Home() {
   const filteredStages = useMemo(() => {
     return STAGES_DATA.filter((stage) => {
       const matchesGrade = stage.grade === grade || (grade === "grade_9" && stage.grade === "grade_9");
-      const matchesSubject = selectedSubject === "all" || stage.subject === selectedSubject;
-      return matchesGrade && matchesSubject;
+      return matchesGrade && stage.subject === selectedSubject;
     });
   }, [grade, selectedSubject]);
 
   // Classify by Subject -> Then Chapter (e.g. Chapter One) -> Then Stages
   const subjectGroups = useMemo(() => {
-    const subjectsOrder: SubjectType[] = ["computer_science", "science", "mathematics", "english"];
-    const subjectsToInclude: SubjectType[] = selectedSubject === "all"
-      ? subjectsOrder
-      : [selectedSubject as SubjectType];
+    const subStages = filteredStages;
+    if (subStages.length === 0) return [];
 
-    return subjectsToInclude
-      .map((subKey) => {
-        const subStages = filteredStages.filter((s) => s.subject === subKey);
-        if (subStages.length === 0) return null;
+    const subKey = selectedSubject as SubjectType;
+    const chaptersMap = new Map<string, Stage[]>();
 
-        // Group stages by chapter in order
-        const chaptersMap = new Map<string, Stage[]>();
-        subStages.forEach((stage) => {
-          const chap = stage.chapter || "Core Curriculum";
-          if (!chaptersMap.has(chap)) {
-            chaptersMap.set(chap, []);
-          }
-          chaptersMap.get(chap)!.push(stage);
-        });
+    subStages.forEach((stage) => {
+      const chap = stage.chapter || "Core Curriculum";
+      if (!chaptersMap.has(chap)) {
+        chaptersMap.set(chap, []);
+      }
+      chaptersMap.get(chap)!.push(stage);
+    });
 
-        const chapters: ChapterGroup[] = Array.from(chaptersMap.entries()).map(([chapterName, stages], idx) => ({
-          chapterIndex: idx + 1,
-          chapterWord: CHAPTER_WORDS[idx] || `${idx + 1}`,
-          chapterName,
-          stages,
-        }));
+    const chapters: ChapterGroup[] = Array.from(chaptersMap.entries()).map(([chapterName, stages], idx) => ({
+      chapterIndex: idx + 1,
+      chapterWord: CHAPTER_WORDS[idx] || `${idx + 1}`,
+      chapterName,
+      stages,
+    }));
 
-        return {
-          subject: subKey,
-          subjectMeta: SUBJECT_METADATA[subKey],
-          chapters,
-          totalStages: subStages.length,
-        };
-      })
-      .filter(Boolean) as SubjectGroup[];
+    return [{
+      subject: subKey,
+      subjectMeta: SUBJECT_METADATA[subKey] || SUBJECT_METADATA.computer_science,
+      chapters,
+      totalStages: subStages.length,
+    }];
   }, [filteredStages, selectedSubject]);
-
-  const activeSubjectMeta = selectedSubject !== "all" 
-    ? SUBJECT_METADATA[selectedSubject as keyof typeof SUBJECT_METADATA] 
-    : null;
 
   const handleNextStage = () => {
     if (!selectedStage || !selectedStage.subject) return;
@@ -236,7 +223,7 @@ export default function Home() {
                 {/* 1. Quick Onboarding 3-Step Banner (Dismissible) */}
                 <HowItWorksBanner />
 
-                {/* 2. Sleek Next Quest Hero & 1-Click Subject Filter */}
+                {/* 2. Sleek Next Quest Hero & 4 Subject Selectors (All Quests tab removed) */}
                 <NextQuestHero
                   stages={STAGES_DATA.filter((s) => s.grade === grade || (grade === "grade_9" && s.grade === "grade_9"))}
                   selectedSubject={selectedSubject}
@@ -244,51 +231,20 @@ export default function Home() {
                   onStartStage={(stage) => setSelectedStage(stage)}
                 />
 
-                {/* 3. Section Header */}
-                <div className="flex items-center justify-between mb-6 pt-3 pb-2 border-b border-neutral-200 dark:border-white/[0.08]">
-                  <div>
-                    <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                      <span>
-                        {activeSubjectMeta ? `${activeSubjectMeta.name} Chapters` : "All Curriculum Chapters"}
-                      </span>
-                      <span className="text-xs font-mono font-normal text-neutral-500 dark:text-neutral-400">
-                        ({filteredStages.length} Total Stages)
-                      </span>
-                    </h2>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                      {activeSubjectMeta 
-                        ? `Explore chapters in ${activeSubjectMeta.name}. Practice any chapter directly.` 
-                        : "Curriculum structured by Subject and Chapter. Practice any chapter directly."}
-                    </p>
-                  </div>
-
-                  {selectedSubject !== "all" && (
-                    <button
-                      onClick={() => {
-                        sound.playClick();
-                        setSelectedSubject("all");
-                      }}
-                      className="text-xs font-mono text-neutral-500 hover:text-neutral-900 dark:hover:text-white underline underline-offset-4"
-                    >
-                      Show All Subjects
-                    </button>
-                  )}
-                </div>
-
-                {/* 4. Hierarchical Classification: Subject -> Chapter (e.g. Chapter One) -> Stages */}
+                {/* 3. Hierarchical Classification: Single Subject Header -> Chapter (e.g. Chapter One) -> Stages */}
                 <div className="space-y-12">
                   {subjectGroups.map((group) => (
                     <section key={group.subject} className="space-y-6">
                       
-                      {/* Subject Header */}
-                      <div className="flex items-center justify-between pb-3 border-b-2 border-neutral-200 dark:border-white/10">
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-2xl">{group.subjectMeta.icon}</span>
+                      {/* Single, Clean Subject Header (No Duplicate) */}
+                      <div className="flex items-center justify-between pb-3.5 border-b border-neutral-200 dark:border-white/10">
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">{group.subjectMeta.icon}</span>
                           <div>
-                            <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
+                            <h2 className="text-lg sm:text-xl font-bold text-neutral-900 dark:text-white">
                               {group.subjectMeta.name}
                             </h2>
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400 hidden sm:block">
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                               {group.subjectMeta.description}
                             </p>
                           </div>
@@ -318,7 +274,7 @@ export default function Home() {
                               </span>
                             </div>
 
-                            {/* Stages Grid (No change to StageCard) */}
+                            {/* Stages Grid (No change to StageCard, all stages open) */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               {chapter.stages.map((stage) => {
                                 const subProgress = (stage.subject ? subjectProgress[stage.subject] : null) || {
@@ -327,7 +283,7 @@ export default function Home() {
                                   bestScores: {},
                                 };
 
-                                const isUnlocked = true; // All chapters and stages are open to practice directly
+                                const isUnlocked = true; // All chapters open to practice directly
                                 const isCompleted = subProgress.completedStages.includes(stage.id) || completedStages.includes(stage.id);
                                 const stageBestScore = subProgress.bestScores[stage.id] || bestScores[stage.id] || 0;
 

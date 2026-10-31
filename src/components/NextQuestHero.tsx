@@ -5,7 +5,7 @@ import { Stage, SubjectType } from "@/types/curriculum";
 import { SUBJECT_METADATA } from "@/data/constants";
 import { useEduStore } from "@/store/useEduStore";
 import { sound } from "@/lib/audio";
-import { Play, Sparkles, CheckCircle2 } from "lucide-react";
+import { Play } from "lucide-react";
 
 interface NextQuestHeroProps {
   stages: Stage[];
@@ -25,7 +25,7 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
   // Find the student's next recommended stage: first uncompleted stage
   const nextStage = stages.find((s) => !completedStages.includes(s.id)) || stages[0];
 
-  const nextMeta = nextStage?.subject ? SUBJECT_METADATA[nextStage.subject] : SUBJECT_METADATA.mathematics;
+  const nextMeta = nextStage?.subject ? SUBJECT_METADATA[nextStage.subject] : SUBJECT_METADATA.computer_science;
 
   const handleStartNext = () => {
     if (!nextStage) return;
@@ -83,29 +83,9 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
         </div>
       )}
 
-      {/* 2. Dead-Simple 1-Click Subject Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+      {/* 2. Dead-Simple 1-Click Subject Switcher (Without "All Quests" tab) */}
+      <div className="pt-2">
         <div className="flex flex-wrap items-center gap-2">
-          
-          {/* "All" Pill */}
-          <button
-            onClick={() => {
-              sound.playClick();
-              onSelectSubject("all");
-            }}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
-              selectedSubject === "all"
-                ? "bg-black dark:bg-white text-white dark:text-black shadow-sm"
-                : "bg-white dark:bg-[#0a0a0a] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-white/10 hover:text-black dark:hover:text-white hover:border-neutral-300"
-            }`}
-          >
-            <span>📚 All Quests</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-neutral-200/50 dark:bg-white/10">
-              {stages.length}
-            </span>
-          </button>
-
-          {/* Individual Subject Pills */}
           {subjectKeys.map((subKey) => {
             const meta = SUBJECT_METADATA[subKey];
             const isSelected = selectedSubject === subKey;
@@ -121,18 +101,18 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
                   sound.playClick();
                   onSelectSubject(subKey);
                 }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
+                className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2.5 ${
                   isSelected
                     ? "bg-black dark:bg-white text-white dark:text-black shadow-sm ring-1 ring-black dark:ring-white"
                     : "bg-white dark:bg-[#0a0a0a] text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-white/10 hover:text-black dark:hover:text-white hover:border-neutral-300"
                 }`}
               >
-                <span>{meta.icon}</span>
+                <span className="text-base">{meta.icon}</span>
                 <span>{meta.name}</span>
                 <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold ${
                     isSelected
-                      ? "bg-white/20 dark:bg-black/10"
+                      ? "bg-white/20 dark:bg-black/15 text-white dark:text-black"
                       : "bg-neutral-100 dark:bg-white/[0.06] text-neutral-500"
                   }`}
                 >
@@ -141,21 +121,7 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
               </button>
             );
           })}
-
         </div>
-
-        {/* Quick clear button if a subject is active */}
-        {selectedSubject !== "all" && (
-          <button
-            onClick={() => {
-              sound.playClick();
-              onSelectSubject("all");
-            }}
-            className="text-xs font-mono text-neutral-500 hover:text-neutral-900 dark:hover:text-white underline underline-offset-4 self-end sm:self-auto"
-          >
-            Show All
-          </button>
-        )}
       </div>
 
     </div>
