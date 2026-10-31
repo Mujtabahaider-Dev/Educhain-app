@@ -1,0 +1,448 @@
+"use client";
+
+import React, { useState } from "react";
+import { 
+  X, 
+  Save, 
+  Plus, 
+  Trash2, 
+  BookOpen, 
+  Layers, 
+  Sparkles, 
+  Check, 
+  AlertCircle 
+} from "lucide-react";
+import { Stage, Question } from "@/types/curriculum";
+import { useCurriculumStore } from "@/store/useCurriculumStore";
+import { sound } from "@/lib/audio";
+
+interface EditStageModalProps {
+  stage: Stage | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSaved: (title: string) => void;
+}
+
+export const EditStageModal: React.FC<EditStageModalProps> = ({
+  stage,
+  isOpen,
+  onClose,
+  onSaved,
+}) => {
+  const { updateStage, getAllSubjects } = useCurriculumStore();
+  const allSubjects = getAllSubjects();
+
+  if (!isOpen || !stage) return null;
+
+  return <EditStageForm stage={stage} onClose={onClose} onSaved={onSaved} allSubjects={allSubjects} updateStage={updateStage} />;
+};
+
+function EditStageForm({
+  stage,
+  onClose,
+  onSaved,
+  allSubjects,
+  updateStage,
+}: {
+  stage: Stage;
+  onClose: () => void;
+  onSaved: (title: string) => void;
+  allSubjects: any[];
+  updateStage: any;
+}) {
+  const [title, setTitle] = useState(stage.title || "");
+  const [chapter, setChapter] = useState(stage.chapter || "");
+  const [topic, setTopic] = useState(stage.topic || "");
+  const [subject, setSubject] = useState<string>(stage.subject || "computer_science");
+  const [grade, setGrade] = useState<string>(stage.grade || "grade_9");
+  const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">(stage.difficulty || "Medium");
+  const [xpReward, setXpReward] = useState<number>(stage.xpReward || 100);
+  const [learningObjective, setLearningObjective] = useState(stage.learningObjective || "");
+  const [questions, setQuestions] = useState<Question[]>(
+    Array.isArray(stage.questions) ? JSON.parse(JSON.stringify(stage.questions)) : []
+  );
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleAddQuestion = () => {
+    sound.playClick();
+    setQuestions([
+      ...questions,
+      {
+        id: `q_${Date.now()}_${questions.length}`,
+        question: "",
+        options: ["", "", "", ""],
+        correctIndex: 0,
+        explanation: "",
+        tags: [],
+      },
+    ]);
+  };
+
+  const handleRemoveQuestion = (idx: number) => {
+    sound.playClick();
+    if (questions.length <= 1) {
+      setErrorMessage("A stage must contain at least 1 question.");
+      return;
+    }
+    setQuestions(questions.filter((_, i) => i !== idx));
+  };
+
+  const handleQuestionTextChange = (idx: number, val: string) => {
+    const updated = [...questions];
+    updated[idx].question = val;
+    setQuestions(updated);
+  };
+
+  const handleOptionChange = (qIdx: number, optIdx: number, val: string) => {
+    const updated = [...questions];
+    updated[qIdx].options[optIdx] = val;
+    setQuestions(updated);
+  };
+
+  const handleCorrectIndexChange = (qIdx: number, correctIdx: number) => {
+    sound.playClick();
+    const updated = [...questions];
+    updated[qIdx].correctIndex = correctIdx;
+    setQuestions(updated);
+  };
+
+  const handleExplanationChange = (qIdx: number, val: string) => {
+    const updated = [...questions];
+    updated[qIdx].explanation = val;
+    setQuestions(updated);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    if (!title.trim() || !chapter.trim() || !topic.trim()) {
+      setErrorMessage("Title, Chapter, and Topic are strictly required.");
+      return;
+    }
+
+    // Validate questions
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.question.trim()) {
+        setErrorMessage(`Question #${i + 1} is empty.`);
+        return;
+      }
+      for (let j = 0; j < 4; j++) {
+        if (!q.options[j]?.trim()) {
+          setErrorMessage(`Option ${String.fromCharCode(65 + j)} for Question #${i + 1} is empty.`);
+          return;
+        }
+      }
+    }
+
+    setIsSaving(true);
+    sound.playClick();
+
+    const selectedSub = allSubjects.find((s) => s.id === subject) || allSubjects[0];
+
+    const updatedData: Partial<Stage> = {
+      title: title.trim(),
+      chapter: chapter.trim(),
+      topic: topic.trim(),
+      subject: subject as any,
+      subjectName: selectedSub.name,
+      grade: grade as any,
+      difficulty,
+      xpReward: Number(xpReward) || 100,
+      learningObjective: learningObjective.trim(),
+      description: learningObjective.trim() || `Quiz covering ${topic.trim()}`,
+      questions,
+    };
+
+    const res = await updateStage(stage.id, updatedData);
+    setIsSaving(false);
+
+    if (res.success) {
+      sound.playUnlock();
+      onSaved(updatedData.title || stage.title);
+      onClose();
+    } else {
+      setErrorMessage(res.error || "Failed to update stage.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0c0c0c] shadow-2xl overflow-hidden">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-neutral-100 dark:border-white/5 bg-neutral-50/50 dark:bg-white/[0.02] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                <span>Edit Stage:</span>
+                <span className="font-mono text-amber-600 dark:text-amber-400">{stage.title}</span>
+              </h3>
+              <p className="text-xs text-neutral-500">
+                Modify stage metadata, question prompts, options, and explanations
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              sound.playClick();
+              onClose();
+            }}
+            className="p-2 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Error notification */}
+        {errorMessage && (
+          <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Scrollable Form Body */}
+        <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-6">
+          
+          {/* Metadata Grid */}
+          <div className="p-5 rounded-2xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-white/[0.02] space-y-4">
+            <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500">
+              Stage Classification
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-mono font-semibold text-neutral-700 dark:text-neutral-300 uppercase mb-1">
+                  Subject
+                </label>
+                <select
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-black text-xs font-medium"
+                >
+                  {allSubjects.map((sub) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.icon} {sub.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono font-semibold text-neutral-700 dark:text-neutral-300 uppercase mb-1">
+                  Chapter Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={chapter}
+                  onChange={(e) => setChapter(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-black text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono font-semibold text-neutral-700 dark:text-neutral-300 uppercase mb-1">
+                  Topic Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-black text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <div>
+                <label className="block text-xs font-mono font-semibold text-neutral-700 dark:text-neutral-300 uppercase mb-1">
+                  Stage Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-black text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono font-semibold text-neutral-700 dark:text-neutral-300 uppercase mb-1">
+                  Difficulty
+                </label>
+                <select
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value as any)}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-black text-xs"
+                >
+                  <option value="Easy">Easy</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono font-semibold text-neutral-700 dark:text-neutral-300 uppercase mb-1">
+                  XP Reward
+                </label>
+                <input
+                  type="number"
+                  min={10}
+                  max={500}
+                  value={xpReward}
+                  onChange={(e) => setXpReward(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-black text-xs font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Questions Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500">
+                MCQ Questions ({questions.length})
+              </h4>
+
+              <button
+                type="button"
+                onClick={handleAddQuestion}
+                className="btn-vercel-secondary text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-bold"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Question</span>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {questions.map((q, qIdx) => (
+                <div
+                  key={q.id || qIdx}
+                  className="p-5 rounded-2xl border border-neutral-200 dark:border-white/10 bg-neutral-50/30 dark:bg-white/[0.01] space-y-3"
+                >
+                  <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-white/5">
+                    <span className="font-mono text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                      Question #{qIdx + 1}
+                    </span>
+
+                    {questions.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveQuestion(qIdx)}
+                        className="text-xs font-mono text-rose-500 hover:text-rose-700 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete Q</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-mono text-neutral-500 uppercase mb-1">
+                      Prompt Text
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={q.question}
+                      onChange={(e) => handleQuestionTextChange(qIdx, e.target.value)}
+                      placeholder="e.g. What is the clock speed measured in?"
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-black text-xs"
+                    />
+                  </div>
+
+                  {/* 4 Options */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {q.options.map((opt, optIdx) => {
+                      const isCorrect = q.correctIndex === optIdx;
+                      const letter = String.fromCharCode(65 + optIdx);
+
+                      return (
+                        <div
+                          key={optIdx}
+                          className={`flex items-center gap-2 p-2 rounded-xl border transition-all ${
+                            isCorrect
+                              ? "border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500/30"
+                              : "border-neutral-200 dark:border-white/10 bg-white dark:bg-black"
+                          }`}
+                        >
+                          <label className="cursor-pointer flex items-center gap-1.5 shrink-0 pl-1">
+                            <input
+                              type="radio"
+                              name={`correct_${qIdx}`}
+                              checked={isCorrect}
+                              onChange={() => handleCorrectIndexChange(qIdx, optIdx)}
+                              className="text-emerald-500 focus:ring-emerald-500"
+                            />
+                            <span className="font-mono text-xs font-bold">{letter}</span>
+                          </label>
+
+                          <input
+                            type="text"
+                            required
+                            value={opt}
+                            onChange={(e) => handleOptionChange(qIdx, optIdx, e.target.value)}
+                            placeholder={`Option ${letter}`}
+                            className="w-full px-2 py-1 bg-transparent text-xs focus:outline-none"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Explanation */}
+                  <div>
+                    <label className="block text-[11px] font-mono text-neutral-500 uppercase mb-1">
+                      Explanation (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={q.explanation || ""}
+                      onChange={(e) => handleExplanationChange(qIdx, e.target.value)}
+                      placeholder="Brief explanation shown after answering"
+                      className="w-full px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-black text-xs text-neutral-600 dark:text-neutral-400"
+                    />
+                  </div>
+
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sticky Submit Footer */}
+          <div className="pt-4 border-t border-neutral-100 dark:border-white/5 flex items-center justify-end gap-3 sticky bottom-0 bg-white dark:bg-[#0c0c0c] py-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-xs font-semibold border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/5"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="btn-vercel-primary px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              <span>{isSaving ? "Saving Changes..." : "Save Stage Changes"}</span>
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  );
+}

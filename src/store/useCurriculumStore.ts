@@ -68,7 +68,9 @@ interface CurriculumStoreState {
   checkSupabaseHealth: () => Promise<boolean>;
   pushLocalToCloud: () => Promise<{ success: boolean; stagesSynced: number; subjectsSynced: number; error?: string }>;
   addSubject: (subject: CustomSubject) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
+  updateSubject: (subjectId: string, updatedData: Partial<CustomSubject>) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
   addStage: (stage: Stage) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
+  updateStage: (stageId: string | number, updatedData: Partial<Stage>) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
   deleteStage: (stageId: string | number) => Promise<{ success: boolean; error?: string }>;
   deleteSubject: (subjectId: string) => Promise<{ success: boolean; error?: string }>;
   syncWithSupabase: () => Promise<void>;
@@ -218,6 +220,50 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
         return { success: true, cloudSynced, error: cloudError };
       },
 
+      updateSubject: async (subjectId: string, updatedData: Partial<CustomSubject>) => {
+        const allSubs = get().getAllSubjects();
+        const existing = allSubs.find((s) => s.id === subjectId);
+        if (!existing) return { success: false, cloudSynced: false, error: "Subject not found" };
+
+        const merged: CustomSubject = {
+          ...existing,
+          ...updatedData,
+          id: subjectId,
+        };
+
+        set((state) => ({
+          customSubjects: [
+            ...state.customSubjects.filter((s) => s.id !== subjectId),
+            merged,
+          ],
+        }));
+
+        let cloudSynced = false;
+        let cloudError: string | undefined;
+
+        try {
+          const { error } = await supabase.from("custom_subjects").upsert({
+            id: merged.id,
+            name: merged.name,
+            icon: merged.icon,
+            description: merged.description,
+            color: merged.color,
+            badge_bg: merged.badgeBg,
+            border_color: merged.borderColor,
+          });
+
+          if (error) {
+            cloudError = error.message;
+          } else {
+            cloudSynced = true;
+          }
+        } catch (e: any) {
+          cloudError = e?.message;
+        }
+
+        return { success: true, cloudSynced, error: cloudError };
+      },
+
       addStage: async (stage: Stage) => {
         const stageId = stage.id || `custom_${Date.now()}`;
         const formatted: Stage = {
@@ -264,6 +310,56 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
         } catch (e: any) {
           cloudError = e?.message;
           set({ cloudSyncStatus: "disconnected", cloudSyncMessage: e?.message });
+        }
+
+        return { success: true, cloudSynced, error: cloudError };
+      },
+
+      updateStage: async (stageId: string | number, updatedData: Partial<Stage>) => {
+        const currentStages = get().getAllStages();
+        const existing = currentStages.find((s) => String(s.id) === String(stageId));
+        if (!existing) return { success: false, cloudSynced: false, error: "Stage not found" };
+
+        const merged: Stage = {
+          ...existing,
+          ...updatedData,
+          id: stageId,
+        };
+
+        set((state) => ({
+          customStages: [
+            ...state.customStages.filter((s) => String(s.id) !== String(stageId)),
+            merged,
+          ],
+        }));
+
+        let cloudSynced = false;
+        let cloudError: string | undefined;
+
+        try {
+          const { error } = await supabase.from("custom_stages").upsert({
+            id: String(stageId),
+            subject_id: merged.subject,
+            subject_name: merged.subjectName,
+            subject_stage_number: merged.subjectStageNumber || 1,
+            grade: merged.grade || "grade_9",
+            chapter: merged.chapter,
+            topic: merged.topic,
+            title: merged.title,
+            description: merged.description,
+            learning_objective: merged.learningObjective,
+            difficulty: merged.difficulty || "Medium",
+            xp_reward: merged.xpReward || 100,
+            questions: merged.questions,
+          });
+
+          if (error) {
+            cloudError = error.message;
+          } else {
+            cloudSynced = true;
+          }
+        } catch (e: any) {
+          cloudError = e?.message;
         }
 
         return { success: true, cloudSynced, error: cloudError };

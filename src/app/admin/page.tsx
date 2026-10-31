@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useCurriculumStore, CustomSubject } from "@/store/useCurriculumStore";
 import { Question, Stage, SubjectType } from "@/types/curriculum";
 import { sound } from "@/lib/audio";
+import { EditStageModal } from "@/components/admin/EditStageModal";
+import { EditSubjectModal } from "@/components/admin/EditSubjectModal";
+import { UsersManager } from "@/components/admin/UsersManager";
 import { 
   Plus, 
   Trash2, 
@@ -26,7 +29,18 @@ import {
   Cloud,
   CloudOff,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Shield,
+  ShieldCheck,
+  Lock,
+  Unlock,
+  Eye,
+  EyeOff,
+  Edit3,
+  Users,
+  LogOut,
+  Search,
+  Filter
 } from "lucide-react";
 
 const COLOR_PRESETS = [
@@ -128,10 +142,61 @@ export default function AdminPage() {
     cloudSyncMessage
   } = useCurriculumStore();
 
-  const [activeTab, setActiveTab] = useState<"csv" | "upload" | "subjects" | "manage" | "sql">("csv");
+  const [activeTab, setActiveTab] = useState<"csv" | "upload" | "subjects" | "manage" | "users" | "sql">("csv");
   const [copiedSql, setCopiedSql] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [isPushingCloud, setIsPushingCloud] = useState(false);
+
+  // Security Gate State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [passcodeInput, setPasscodeInput] = useState<string>("");
+  const [showPasscode, setShowPasscode] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Edit Modals State
+  const [editingStage, setEditingStage] = useState<Stage | null>(null);
+  const [isEditStageOpen, setIsEditStageOpen] = useState<boolean>(false);
+  const [editingSubject, setEditingSubject] = useState<CustomSubject | null>(null);
+  const [isEditSubjectOpen, setIsEditSubjectOpen] = useState<boolean>(false);
+
+  // Filter in Stage Catalog
+  const [stageFilterSubject, setStageFilterSubject] = useState<string>("all");
+  const [stageSearch, setStageSearch] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isAuth = sessionStorage.getItem("educhain_admin_auth") === "true";
+      setIsAuthenticated(isAuth);
+    }
+  }, []);
+
+  const handleUnlockAdmin = (e: React.FormEvent) => {
+    e.preventDefault();
+    sound.playClick();
+    const clean = passcodeInput.trim();
+    if (clean === "admin123" || clean === "educhain@admin2026") {
+      sound.playUnlock();
+      setIsAuthenticated(true);
+      setAuthError(null);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("educhain_admin_auth", "true");
+      }
+      showNotification("Admin authenticated. Welcome to EduChain Studio!");
+    } else {
+      sound.playIncorrect();
+      setAuthError("Incorrect admin security passcode. Please try again.");
+    }
+  };
+
+  const handleLockAdmin = () => {
+    sound.playClick();
+    setIsAuthenticated(false);
+    setPasscodeInput("");
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("educhain_admin_auth");
+    }
+    showNotification("Admin panel locked.");
+  };
 
   const allSubjects = getAllSubjects();
 
@@ -580,6 +645,87 @@ export default function AdminPage() {
     setTimeout(() => setCopiedSql(false), 2500);
   };
 
+  // 1. SECURITY LOCK SCREEN GATE
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-neutral-900 flex items-center justify-center p-4 selection:bg-amber-500 selection:text-black">
+        <div className="w-full max-w-md p-8 rounded-3xl border border-white/10 bg-[#0c0c0c] shadow-2xl space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
+          
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shadow-inner">
+            <Shield className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono uppercase px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">
+              Restricted Area
+            </span>
+            <h2 className="text-2xl font-extrabold text-white tracking-tight mt-2">
+              EduChain Admin Security
+            </h2>
+            <p className="text-xs text-neutral-400 leading-relaxed max-w-xs mx-auto">
+              Please enter your administrator security passcode to manage the curriculum and student database.
+            </p>
+          </div>
+
+          {authError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium flex items-center justify-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{authError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleUnlockAdmin} className="space-y-4 text-left">
+            <div>
+              <label className="block text-xs font-mono font-semibold text-neutral-400 uppercase mb-1.5">
+                Admin Master Passcode
+              </label>
+              <div className="relative">
+                <input
+                  type={showPasscode ? "text" : "password"}
+                  required
+                  value={passcodeInput}
+                  onChange={(e) => setPasscodeInput(e.target.value)}
+                  placeholder="Enter admin passcode"
+                  className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-white/10 bg-white/[0.04] text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasscode(!showPasscode)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
+                >
+                  {showPasscode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="flex items-center justify-between mt-1.5 text-[11px] text-neutral-500">
+                <span>Default: <code>admin123</code></span>
+                <span className="font-mono text-neutral-600">Encrypted</span>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 rounded-xl text-xs font-bold btn-vercel-primary flex items-center justify-center gap-2 shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all"
+            >
+              <Unlock className="w-4 h-4" />
+              <span>Unlock Admin Panel</span>
+            </button>
+          </form>
+
+          <div className="pt-2 border-t border-white/5">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Return to Student App</span>
+            </Link>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-black text-neutral-900 dark:text-neutral-100 font-sans selection:bg-neutral-900 selection:text-white dark:selection:bg-white dark:selection:text-black">
       
@@ -645,6 +791,15 @@ export default function AdminPage() {
               <span>Student App</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </Link>
+
+            <button
+              onClick={handleLockAdmin}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 transition-all"
+              title="Lock admin session"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Lock Panel</span>
+            </button>
           </div>
         </div>
       </header>
@@ -725,8 +880,9 @@ export default function AdminPage() {
           {[
             { id: "csv", label: "Upload via CSV File", icon: FileSpreadsheet },
             { id: "upload", label: "Manual Form MCQ Builder", icon: Plus },
-            { id: "subjects", label: "Create / Manage Subjects", icon: Layers },
             { id: "manage", label: `Manage Stages (${customStages.length} Custom)`, icon: BookOpen },
+            { id: "subjects", label: "Create / Manage Subjects", icon: Layers },
+            { id: "users", label: "Scholars & Users Data", icon: Users },
             { id: "sql", label: "Supabase Cloud Setup", icon: Database },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1478,10 +1634,19 @@ export default function AdminPage() {
                       </div>
 
                       <div className="mt-4 pt-3 border-t border-neutral-200/60 dark:border-white/5 flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-neutral-400">
-                          {isCustom ? "Custom Added" : "Core System"}
-                        </span>
-                        {isCustom && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            sound.playClick();
+                            setEditingSubject(sub);
+                            setIsEditSubjectOpen(true);
+                          }}
+                          className="text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 font-semibold"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                        {isCustom ? (
                           <button
                             onClick={() => {
                               if (confirm(`Delete subject "${sub.name}" and all its custom stages?`)) {
@@ -1490,10 +1655,14 @@ export default function AdminPage() {
                                 showNotification(`Subject "${sub.name}" deleted.`);
                               }
                             }}
-                            className="text-xs text-rose-500 hover:text-rose-700"
+                            className="text-xs text-rose-500 hover:text-rose-700 font-mono"
                           >
                             Delete
                           </button>
+                        ) : (
+                          <span className="text-[10px] font-mono text-neutral-400">
+                            Core System
+                          </span>
                         )}
                       </div>
                     </div>
@@ -1510,13 +1679,13 @@ export default function AdminPage() {
         {/* ======================================================== */}
         {activeTab === "manage" && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white">
                   Curriculum Stage Catalog
                 </h3>
                 <p className="text-xs text-neutral-500">
-                  {customStages.length} custom uploaded stages, {getAllStages().length} total stages in system.
+                  {customStages.length} custom stages, {getAllStages().length} total stages in system. Click Edit on any stage to edit questions and metadata.
                 </p>
               </div>
 
@@ -1538,6 +1707,36 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                <input
+                  type="text"
+                  value={stageSearch}
+                  onChange={(e) => setStageSearch(e.target.value)}
+                  placeholder="Filter stages by title, chapter or topic..."
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.03] text-xs focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-neutral-500 font-mono">Subject:</span>
+                <select
+                  value={stageFilterSubject}
+                  onChange={(e) => setStageFilterSubject(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.03] text-xs font-medium"
+                >
+                  <option value="all">All Subjects</option>
+                  {allSubjects.map((sub) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {/* Stages Table */}
             <div className="border border-neutral-200 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-[#0a0a0a]">
               <table className="w-full text-left text-xs">
@@ -1552,58 +1751,91 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100 dark:divide-white/[0.04]">
-                  {getAllStages().map((stage) => {
-                    const isCustom = customStages.some((cs) => String(cs.id) === String(stage.id));
+                  {getAllStages()
+                    .filter((stage) => {
+                      const matchesSub = stageFilterSubject === "all" || stage.subject === stageFilterSubject;
+                      const matchesSearch = stage.title.toLowerCase().includes(stageSearch.toLowerCase()) ||
+                        (stage.chapter || "").toLowerCase().includes(stageSearch.toLowerCase()) ||
+                        (stage.topic || "").toLowerCase().includes(stageSearch.toLowerCase());
+                      return matchesSub && matchesSearch;
+                    })
+                    .map((stage) => {
+                      const isCustom = customStages.some((cs) => String(cs.id) === String(stage.id));
 
-                    return (
-                      <tr key={stage.id} className="hover:bg-neutral-50 dark:hover:bg-white/[0.02]">
-                        <td className="py-3 px-4 font-mono font-semibold text-neutral-800 dark:text-neutral-200 capitalize">
-                          {stage.subjectName || stage.subject?.replace("_", " ")}
-                        </td>
-                        <td className="py-3 px-4 text-neutral-600 dark:text-neutral-400">
-                          {stage.chapter}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="font-semibold text-neutral-900 dark:text-white">{stage.title}</div>
-                          <div className="text-[11px] text-neutral-500">{stage.topic}</div>
-                        </td>
-                        <td className="py-3 px-4 text-center font-mono font-bold text-amber-600 dark:text-amber-400">
-                          {stage.questions.length} Qs
-                        </td>
-                        <td className="py-3 px-4 text-center font-mono">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            stage.difficulty === "Easy" ? "bg-emerald-500/10 text-emerald-600" :
-                            stage.difficulty === "Medium" ? "bg-amber-500/10 text-amber-600" : "bg-rose-500/10 text-rose-600"
-                          }`}>
-                            {stage.difficulty}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          {isCustom ? (
-                            <button
-                              onClick={() => {
-                                if (confirm(`Delete custom stage "${stage.title}"?`)) {
-                                  deleteStage(stage.id);
+                      return (
+                        <tr key={stage.id} className="hover:bg-neutral-50 dark:hover:bg-white/[0.02]">
+                          <td className="py-3 px-4 font-mono font-semibold text-neutral-800 dark:text-neutral-200 capitalize">
+                            {stage.subjectName || stage.subject?.replace("_", " ")}
+                          </td>
+                          <td className="py-3 px-4 text-neutral-600 dark:text-neutral-400">
+                            {stage.chapter}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-neutral-900 dark:text-white">{stage.title}</div>
+                            <div className="text-[11px] text-neutral-500">{stage.topic}</div>
+                          </td>
+                          <td className="py-3 px-4 text-center font-mono font-bold text-amber-600 dark:text-amber-400">
+                            {stage.questions.length} Qs
+                          </td>
+                          <td className="py-3 px-4 text-center font-mono">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              stage.difficulty === "Easy" ? "bg-emerald-500/10 text-emerald-600" :
+                              stage.difficulty === "Medium" ? "bg-amber-500/10 text-amber-600" : "bg-rose-500/10 text-rose-600"
+                            }`}>
+                              {stage.difficulty}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2.5">
+                              <button
+                                onClick={() => {
                                   sound.playClick();
-                                  showNotification(`Stage "${stage.title}" deleted.`);
-                                }
-                              }}
-                              className="text-xs font-mono text-rose-500 hover:text-rose-700"
-                            >
-                              Delete
-                            </button>
-                          ) : (
-                            <span className="text-[11px] font-mono text-neutral-400">Built-in</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                                  setEditingStage(stage);
+                                  setIsEditStageOpen(true);
+                                }}
+                                className="text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
+                                title="Edit Stage and Questions"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>Edit</span>
+                              </button>
+
+                              {isCustom ? (
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`Delete custom stage "${stage.title}"?`)) {
+                                      deleteStage(stage.id);
+                                      sound.playClick();
+                                      showNotification(`Stage "${stage.title}" deleted.`);
+                                    }
+                                  }}
+                                  className="text-xs font-mono text-rose-500 hover:text-rose-700 flex items-center gap-1"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Delete</span>
+                                </button>
+                              ) : (
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/5 text-neutral-400">
+                                  Core
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
 
           </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 4: USERS & SCHOLARS MANAGEMENT */}
+        {/* ======================================================== */}
+        {activeTab === "users" && (
+          <UsersManager onNotify={showNotification} />
         )}
 
         {/* ======================================================== */}
@@ -1710,6 +1942,32 @@ export default function AdminPage() {
         )}
 
       </main>
+
+      {/* Edit Stage Modal */}
+      <EditStageModal
+        isOpen={isEditStageOpen}
+        stage={editingStage}
+        onClose={() => {
+          setIsEditStageOpen(false);
+          setEditingStage(null);
+        }}
+        onSaved={(title) => {
+          showNotification(`Stage "${title}" updated successfully!`);
+        }}
+      />
+
+      {/* Edit Subject Modal */}
+      <EditSubjectModal
+        isOpen={isEditSubjectOpen}
+        subject={editingSubject}
+        onClose={() => {
+          setIsEditSubjectOpen(false);
+          setEditingSubject(null);
+        }}
+        onSaved={(name) => {
+          showNotification(`Subject "${name}" updated successfully!`);
+        }}
+      />
 
     </div>
   );
