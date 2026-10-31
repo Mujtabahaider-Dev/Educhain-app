@@ -61,10 +61,14 @@ interface CurriculumStoreState {
   customSubjects: CustomSubject[];
   customStages: Stage[];
   isLoading: boolean;
+  cloudSyncStatus: "checking" | "connected" | "disconnected";
+  cloudSyncMessage?: string;
   
   // Actions
-  addSubject: (subject: CustomSubject) => Promise<{ success: boolean; error?: string }>;
-  addStage: (stage: Stage) => Promise<{ success: boolean; error?: string }>;
+  checkSupabaseHealth: () => Promise<boolean>;
+  pushLocalToCloud: () => Promise<{ success: boolean; stagesSynced: number; subjectsSynced: number; error?: string }>;
+  addSubject: (subject: CustomSubject) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
+  addStage: (stage: Stage) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
   deleteStage: (stageId: string | number) => Promise<{ success: boolean; error?: string }>;
   deleteSubject: (subjectId: string) => Promise<{ success: boolean; error?: string }>;
   syncWithSupabase: () => Promise<void>;
@@ -78,10 +82,82 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
       customSubjects: [],
       customStages: [],
       isLoading: false,
+      cloudSyncStatus: "checking",
+      cloudSyncMessage: undefined,
+
+      checkSupabaseHealth: async () => {
+        try {
+          const { error } = await supabase.from("custom_stages").select("id").limit(1);
+          if (error) {
+            set({ 
+              cloudSyncStatus: "disconnected", 
+              cloudSyncMessage: error.message || "Table 'custom_stages' not found in Supabase" 
+            });
+            return false;
+          }
+          set({ 
+            cloudSyncStatus: "connected", 
+            cloudSyncMessage: "Connected to Supabase cloud database" 
+          });
+          return true;
+        } catch (e: any) {
+          set({ 
+            cloudSyncStatus: "disconnected", 
+            cloudSyncMessage: e?.message || "Failed to connect to Supabase" 
+          });
+          return false;
+        }
+      },
+
+      pushLocalToCloud: async () => {
+        const { customSubjects, customStages } = get();
+        let stagesCount = 0;
+        let subjectsCount = 0;
+
+        try {
+          // Push custom subjects
+          for (const sub of customSubjects) {
+            const { error } = await supabase.from("custom_subjects").upsert({
+              id: sub.id,
+              name: sub.name,
+              icon: sub.icon,
+              description: sub.description,
+              color: sub.color,
+              badge_bg: sub.badgeBg,
+              border_color: sub.borderColor,
+            });
+            if (!error) subjectsCount++;
+          }
+
+          // Push custom stages with questions
+          for (const stg of customStages) {
+            const { error } = await supabase.from("custom_stages").upsert({
+              id: String(stg.id),
+              subject_id: stg.subject,
+              subject_name: stg.subjectName,
+              subject_stage_number: stg.subjectStageNumber || 1,
+              grade: stg.grade || "grade_9",
+              chapter: stg.chapter,
+              topic: stg.topic,
+              title: stg.title,
+              description: stg.description,
+              learning_objective: stg.learningObjective,
+              difficulty: stg.difficulty || "Medium",
+              xp_reward: stg.xpReward || 100,
+              questions: stg.questions,
+            });
+            if (!error) stagesCount++;
+          }
+
+          set({ cloudSyncStatus: "connected", cloudSyncMessage: "All local data synced to Supabase" });
+          return { success: true, stagesSynced: stagesCount, subjectsSynced: subjectsCount };
+        } catch (err: any) {
+          return { success: false, stagesSynced: stagesCount, subjectsSynced: subjectsCount, error: err?.message };
+        }
+      },
 
       getAllSubjects: () => {
         const { customSubjects } = get();
-        // Return default subjects plus any custom subjects created by admin
         const customIds = new Set(customSubjects.map((s) => s.id));
         const filteredDefaults = DEFAULT_SUBJECTS.filter((s) => !customIds.has(s.id));
         return [...filteredDefaults, ...customSubjects];
@@ -89,7 +165,6 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
 
       getAllStages: () => {
         const { customStages } = get();
-        // Merge base curriculum with custom admin uploaded stages
         const customIds = new Set(customStages.map((s) => String(s.id)));
         const filteredDefaults = STAGES_DATA.filter((s) => !customIds.has(String(s.id)));
         return [...filteredDefaults, ...customStages];
@@ -114,6 +189,9 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
         }));
 
         // 2. Try persisting to Supabase if table exists
+        let cloudSynced = false;
+        let cloudError: string | undefined;
+
         try {
           const { error } = await supabase.from("custom_subjects").upsert({
             id: formatted.id,
@@ -126,13 +204,18 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
           });
 
           if (error) {
-            console.warn("Notice: Custom subject saved locally. (Run SQL to sync with Supabase cloud):", error.message);
+            cloudError = error.message;
+            set({ cloudSyncStatus: "disconnected", cloudSyncMessage: error.message });
+          } else {
+            cloudSynced = true;
+            set({ cloudSyncStatus: "connected" });
           }
-        } catch (e) {
-          console.warn("Supabase subject sync exception:", e);
+        } catch (e: any) {
+          cloudError = e?.message;
+          set({ cloudSyncStatus: "disconnected", cloudSyncMessage: e?.message });
         }
 
-        return { success: true };
+        return { success: true, cloudSynced, error: cloudError };
       },
 
       addStage: async (stage: Stage) => {
@@ -151,6 +234,9 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
         }));
 
         // 2. Try persisting to Supabase if table exists
+        let cloudSynced = false;
+        let cloudError: string | undefined;
+
         try {
           const { error } = await supabase.from("custom_stages").upsert({
             id: String(stageId),
@@ -169,13 +255,18 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
           });
 
           if (error) {
-            console.warn("Notice: Custom stage saved locally. (Run SQL to sync with Supabase cloud):", error.message);
+            cloudError = error.message;
+            set({ cloudSyncStatus: "disconnected", cloudSyncMessage: error.message });
+          } else {
+            cloudSynced = true;
+            set({ cloudSyncStatus: "connected" });
           }
-        } catch (e) {
-          console.warn("Supabase stage sync exception:", e);
+        } catch (e: any) {
+          cloudError = e?.message;
+          set({ cloudSyncStatus: "disconnected", cloudSyncMessage: e?.message });
         }
 
-        return { success: true };
+        return { success: true, cloudSynced, error: cloudError };
       },
 
       deleteStage: async (stageId: string | number) => {

@@ -22,7 +22,11 @@ import {
   FileSpreadsheet,
   Download,
   FileText,
-  HelpCircle
+  HelpCircle,
+  Cloud,
+  CloudOff,
+  RefreshCw,
+  AlertTriangle
 } from "lucide-react";
 
 const COLOR_PRESETS = [
@@ -36,7 +40,7 @@ const COLOR_PRESETS = [
   { label: "Orange", value: "#f97316" },
 ];
 
-const SUPABASE_SQL_SCRIPT = `-- Run this in Supabase SQL Editor (supabase.com/dashboard) to enable cloud storage for custom MCQs:
+const SUPABASE_SQL_SCRIPT = `-- Run this in Supabase SQL Editor (supabase.com/dashboard/project/elpzdzevtwinoaspyngi/sql/new) to enable cloud storage for MCQs:
 
 CREATE TABLE IF NOT EXISTS public.custom_subjects (
   id TEXT PRIMARY KEY,
@@ -66,9 +70,14 @@ CREATE TABLE IF NOT EXISTS public.custom_stages (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Enable RLS and public policies
+-- Enable RLS and public policies (safe idempotent rerun)
 ALTER TABLE public.custom_subjects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.custom_stages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read custom_subjects" ON public.custom_subjects;
+DROP POLICY IF EXISTS "Allow public read custom_stages" ON public.custom_stages;
+DROP POLICY IF EXISTS "Allow public write custom_subjects" ON public.custom_subjects;
+DROP POLICY IF EXISTS "Allow public write custom_stages" ON public.custom_stages;
 
 CREATE POLICY "Allow public read custom_subjects" ON public.custom_subjects FOR SELECT USING (true);
 CREATE POLICY "Allow public read custom_stages" ON public.custom_stages FOR SELECT USING (true);
@@ -86,12 +95,17 @@ export default function AdminPage() {
     addStage, 
     deleteStage, 
     deleteSubject,
-    syncWithSupabase 
+    syncWithSupabase,
+    checkSupabaseHealth,
+    pushLocalToCloud,
+    cloudSyncStatus,
+    cloudSyncMessage
   } = useCurriculumStore();
 
   const [activeTab, setActiveTab] = useState<"csv" | "upload" | "subjects" | "manage" | "sql">("csv");
   const [copiedSql, setCopiedSql] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [isPushingCloud, setIsPushingCloud] = useState(false);
 
   const allSubjects = getAllSubjects();
 
@@ -147,12 +161,26 @@ export default function AdminPage() {
   const [newSubColor, setNewSubColor] = useState("#38bdf8");
 
   useEffect(() => {
+    checkSupabaseHealth();
     syncWithSupabase();
-  }, [syncWithSupabase]);
+  }, [checkSupabaseHealth, syncWithSupabase]);
 
   const showNotification = (message: string, type: "success" | "error" = "success") => {
     setNotification({ message, type });
-    setTimeout(() => setNotification(null), 4000);
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handlePushToCloud = async () => {
+    setIsPushingCloud(true);
+    const res = await pushLocalToCloud();
+    setIsPushingCloud(false);
+    if (res.success) {
+      sound.playUnlock();
+      showNotification(`Cloud sync complete! Pushed ${res.stagesSynced} stages and ${res.subjectsSynced} subjects to Supabase.`);
+      await checkSupabaseHealth();
+    } else {
+      showNotification(`Cloud sync failed: ${res.error || "Please run SQL script first in Supabase."}`, "error");
+    }
   };
 
   // Robust CSV parser function
@@ -349,7 +377,11 @@ export default function AdminPage() {
     const res = await addStage(newStage);
     if (res.success) {
       sound.playUnlock();
-      showNotification(`Successfully published stage "${newStage.title}" with ${formattedQuestions.length} MCQs from CSV!`);
+      if (res.cloudSynced) {
+        showNotification(`Published "${newStage.title}" with ${formattedQuestions.length} MCQs to Supabase Cloud & Local Storage!`);
+      } else {
+        showNotification(`Stage saved to Local Browser Storage only (Supabase tables missing. Run SQL in 'Supabase Cloud Setup' tab to enable cloud sync).`, "error");
+      }
       // Reset CSV form
       setCsvChapter("");
       setCsvTopic("");
@@ -460,7 +492,11 @@ export default function AdminPage() {
     const res = await addStage(newStage);
     if (res.success) {
       sound.playUnlock();
-      showNotification(`Successfully published stage "${newStage.title}" with ${formattedQuestions.length} MCQs!`);
+      if (res.cloudSynced) {
+        showNotification(`Published "${newStage.title}" with ${formattedQuestions.length} MCQs to Supabase Cloud & Local Storage!`);
+      } else {
+        showNotification(`Stage saved to Local Browser Storage only (Supabase tables missing. Run SQL in 'Supabase Cloud Setup' tab to enable cloud sync).`, "error");
+      }
       setChapter("");
       setTopic("");
       setTitle("");
@@ -494,7 +530,13 @@ export default function AdminPage() {
       color: newSubColor,
     };
 
-    await addSubject(newSubject);
+    const res = await addSubject(newSubject);
+    sound.playUnlock();
+    if (res.cloudSynced) {
+      showNotification(`Subject "${newSubject.name}" created and synced to Supabase Cloud!`);
+    } else {
+      showNotification(`Subject "${newSubject.name}" created locally (Supabase table missing. Run SQL setup to sync to cloud).`, "error");
+    }
     sound.playUnlock();
     showNotification(`New Subject "${newSubject.name}" created successfully!`);
     setCsvSubjectId(newSubject.id);
@@ -540,6 +582,35 @@ export default function AdminPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {cloudSyncStatus === "connected" ? (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <Cloud className="w-3.5 h-3.5" />
+                <span>Cloud Synced</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  setActiveTab("sql");
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
+                title="Supabase table not detected. Click to set up."
+              >
+                <CloudOff className="w-3.5 h-3.5" />
+                <span>Local Storage Only</span>
+              </button>
+            )}
+
+            <button
+              disabled={isPushingCloud}
+              onClick={handlePushToCloud}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
+              title="Push all locally stored stages & MCQs to Supabase cloud"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isPushingCloud ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">Sync Cloud</span>
+            </button>
+
             <Link
               href="/"
               target="_blank"
@@ -554,18 +625,74 @@ export default function AdminPage() {
 
       {/* Notification Toast */}
       {notification && (
-        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 text-xs font-medium border animate-in slide-in-from-bottom-3 ${
+        <div className={`fixed bottom-6 right-6 z-50 max-w-md px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-medium border animate-in slide-in-from-bottom-3 ${
           notification.type === "success" 
-            ? "bg-emerald-50 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-200 border-emerald-500/30"
-            : "bg-rose-50 dark:bg-rose-950/80 text-rose-800 dark:text-rose-200 border-rose-500/30"
+            ? "bg-emerald-50 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-200 border-emerald-500/30"
+            : "bg-rose-50 dark:bg-rose-950/90 text-rose-800 dark:text-rose-200 border-rose-500/30"
         }`}>
-          {notification.type === "success" ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <AlertCircle className="w-4 h-4 text-rose-500" />}
+          {notification.type === "success" ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />}
           <span>{notification.message}</span>
         </div>
       )}
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Supabase Status Alert Banner */}
+        {cloudSyncStatus === "disconnected" && (
+          <div className="mb-8 p-4 rounded-2xl border border-amber-500/30 bg-amber-50/70 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold flex items-center gap-2">
+                  <span>Supabase Database Tables Not Created Yet</span>
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 font-bold">Action Required</span>
+                </h4>
+                <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-1 leading-relaxed">
+                  Your custom stages and MCQs are currently saved <strong>locally in this browser</strong>. To make them live for all students across devices, create the <code className="bg-amber-500/20 px-1 py-0.5 rounded font-mono text-[11px]">custom_stages</code> table in Supabase.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  setActiveTab("sql");
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 shadow-sm transition-all"
+              >
+                Open SQL Setup Tab
+              </button>
+              <button
+                disabled={isPushingCloud}
+                onClick={handlePushToCloud}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold border border-amber-500/30 bg-white dark:bg-black/40 hover:bg-amber-500/10 transition-all flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isPushingCloud ? "animate-spin" : ""}`} />
+                <span>Retry Sync</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {cloudSyncStatus === "connected" && (
+          <div className="mb-6 px-4 py-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-800 dark:text-emerald-300 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <Cloud className="w-4 h-4 text-emerald-500" />
+              <span><strong>Supabase Cloud Connected:</strong> All custom stages and MCQs are synchronizing live with your Supabase database.</span>
+            </div>
+            <button
+              disabled={isPushingCloud}
+              onClick={handlePushToCloud}
+              className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 hover:underline flex items-center gap-1"
+            >
+              <RefreshCw className={`w-3 h-3 ${isPushingCloud ? "animate-spin" : ""}`} />
+              <span>Force Re-sync</span>
+            </button>
+          </div>
+        )}
         
         {/* Navigation Tabs */}
         <div className="flex flex-wrap items-center gap-1.5 mb-8 pb-4 border-b border-neutral-200 dark:border-white/10">
@@ -1458,38 +1585,100 @@ export default function AdminPage() {
         {/* ======================================================== */}
         {activeTab === "sql" && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            <div className="p-6 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] shadow-sm">
-              <div className="flex items-center justify-between mb-4">
+            <div className="p-6 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] shadow-sm space-y-6">
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-100 dark:border-white/5">
                 <div>
-                  <h3 className="text-base font-bold text-neutral-900 dark:text-white">
-                    Supabase Cloud Sync Migration
+                  <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                    <Database className="w-4 h-4 text-emerald-500" />
+                    <span>Supabase Cloud Database Setup</span>
                   </h3>
                   <p className="text-xs text-neutral-500 mt-0.5">
-                    Run this SQL script in your Supabase Dashboard SQL Editor to store custom subjects & MCQs in your PostgreSQL cloud database.
+                    Run this SQL script in Supabase once so all uploaded MCQs and custom chapters are saved to the cloud for all learners.
                   </p>
                 </div>
 
-                <button
-                  onClick={copySql}
-                  className="btn-vercel-primary text-xs px-4 py-2 rounded-xl flex items-center gap-1.5"
-                >
-                  {copiedSql ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedSql ? "Copied SQL!" : "Copy SQL Script"}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <a
+                    href="https://supabase.com/dashboard/project/elpzdzevtwinoaspyngi/sql/new"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-vercel-secondary text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5"
+                  >
+                    <span>Open Supabase SQL Editor</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+
+                  <button
+                    onClick={copySql}
+                    className="btn-vercel-primary text-xs px-4 py-2 rounded-xl flex items-center gap-1.5"
+                  >
+                    {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedSql ? "Copied SQL!" : "Copy SQL Script"}</span>
+                  </button>
+                </div>
               </div>
 
+              {/* 3 Step Guide */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl border border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-white/[0.02]">
+                  <div className="font-mono text-xs font-bold text-neutral-400 mb-1">STEP 1</div>
+                  <h4 className="text-xs font-bold text-neutral-900 dark:text-white mb-1">Copy Script</h4>
+                  <p className="text-[11px] text-neutral-500">
+                    Click the <strong>Copy SQL Script</strong> button above to copy the database tables and security policies to your clipboard.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl border border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-white/[0.02]">
+                  <div className="font-mono text-xs font-bold text-neutral-400 mb-1">STEP 2</div>
+                  <h4 className="text-xs font-bold text-neutral-900 dark:text-white mb-1">Execute in Supabase</h4>
+                  <p className="text-[11px] text-neutral-500">
+                    Open your <strong>Supabase SQL Editor</strong>, paste the script into the query box, and click <strong>Run</strong> (Ctrl+Enter).
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl border border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-white/[0.02]">
+                  <div className="font-mono text-xs font-bold text-neutral-400 mb-1">STEP 3</div>
+                  <h4 className="text-xs font-bold text-neutral-900 dark:text-white mb-1">Sync Local Data</h4>
+                  <p className="text-[11px] text-neutral-500">
+                    Click <strong>Push Local Data to Supabase</strong> below. Any MCQs you already uploaded locally will immediately push to the cloud!
+                  </p>
+                </div>
+              </div>
+
+              {/* SQL Code Block */}
               <div className="relative">
-                <pre className="p-4 rounded-xl bg-neutral-900 text-neutral-100 font-mono text-xs overflow-x-auto leading-relaxed border border-neutral-800">
+                <div className="flex items-center justify-between px-4 py-2 bg-neutral-800 rounded-t-xl border border-neutral-700 text-neutral-300 font-mono text-[11px]">
+                  <span>schema.sql</span>
+                  <button onClick={copySql} className="text-xs text-neutral-300 hover:text-white flex items-center gap-1">
+                    {copiedSql ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedSql ? "Copied" : "Copy"}</span>
+                  </button>
+                </div>
+                <pre className="p-4 rounded-b-xl bg-neutral-900 text-neutral-100 font-mono text-xs overflow-x-auto leading-relaxed border-x border-b border-neutral-700 max-h-80">
                   {SUPABASE_SQL_SCRIPT}
                 </pre>
               </div>
 
-              <div className="mt-4 p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2">
-                <Sparkles className="w-4 h-4 shrink-0 text-emerald-500" />
-                <span>
-                  <strong>Dual Sync Active:</strong> Any stages or subjects created in this Admin Panel are immediately saved in this browser and synced with Supabase!
-                </span>
+              {/* Actions & Status */}
+              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2.5 h-2.5 rounded-full ${cloudSyncStatus === "connected" ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                  <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                    Status: <strong>{cloudSyncStatus === "connected" ? "Cloud Connected" : "Local Mode (Supabase table not detected)"}</strong>
+                  </span>
+                </div>
+
+                <button
+                  disabled={isPushingCloud}
+                  onClick={handlePushToCloud}
+                  className="btn-vercel-primary text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isPushingCloud ? "animate-spin" : ""}`} />
+                  <span>{isPushingCloud ? "Syncing with Supabase..." : `Push ${customStages.length} Local Stages to Supabase Cloud`}</span>
+                </button>
               </div>
+
             </div>
           </div>
         )}
