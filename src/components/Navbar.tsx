@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useEduStore } from "@/store/useEduStore";
 import { sound } from "@/lib/audio";
 import { RANKS } from "@/data/constants";
@@ -15,7 +16,8 @@ import {
   Trophy, 
   Sun, 
   Moon, 
-  LogIn 
+  LogIn,
+  Swords
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 
@@ -141,6 +143,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               );
             })}
+
+            <Link
+              href="/battle"
+              onClick={() => sound.playClick()}
+              className="relative flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-50 dark:hover:bg-white/[0.03]"
+            >
+              <Swords className="w-3.5 h-3.5 text-rose-500" />
+              <span>Multiplayer</span>
+              <span className="ml-0.5 text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                LIVE
+              </span>
+            </Link>
           </nav>
         </div>
 
@@ -267,6 +281,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           );
         })}
+
+        <Link
+          href="/battle"
+          onClick={() => sound.playClick()}
+          className="flex flex-col items-center gap-1 px-3 py-1 text-[11px] rounded transition-all relative text-rose-600 dark:text-rose-400 font-bold"
+        >
+          <div className="relative">
+            <Swords className="w-4 h-4" />
+            <span className="absolute -top-1 -right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+          </div>
+          <span>Battle</span>
+        </Link>
       </div>
     </header>
   );

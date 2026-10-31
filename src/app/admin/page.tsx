@@ -70,19 +70,45 @@ CREATE TABLE IF NOT EXISTS public.custom_stages (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- 3. Create table for multiplayer rooms
+CREATE TABLE IF NOT EXISTS public.multiplayer_rooms (
+  id TEXT PRIMARY KEY,
+  room_code TEXT UNIQUE NOT NULL,
+  host_id TEXT NOT NULL,
+  host_name TEXT NOT NULL,
+  host_avatar TEXT DEFAULT '👑',
+  room_name TEXT NOT NULL,
+  mode TEXT DEFAULT 'duel',
+  subject_id TEXT NOT NULL,
+  subject_name TEXT NOT NULL,
+  chapter TEXT,
+  question_count INTEGER DEFAULT 5,
+  time_per_question INTEGER DEFAULT 15,
+  is_public BOOLEAN DEFAULT true,
+  status TEXT DEFAULT 'waiting',
+  questions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  results JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- Enable RLS and public policies (safe idempotent rerun)
 ALTER TABLE public.custom_subjects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.custom_stages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.multiplayer_rooms ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read custom_subjects" ON public.custom_subjects;
 DROP POLICY IF EXISTS "Allow public read custom_stages" ON public.custom_stages;
 DROP POLICY IF EXISTS "Allow public write custom_subjects" ON public.custom_subjects;
 DROP POLICY IF EXISTS "Allow public write custom_stages" ON public.custom_stages;
+DROP POLICY IF EXISTS "Allow public read multiplayer_rooms" ON public.multiplayer_rooms;
+DROP POLICY IF EXISTS "Allow public write multiplayer_rooms" ON public.multiplayer_rooms;
 
 CREATE POLICY "Allow public read custom_subjects" ON public.custom_subjects FOR SELECT USING (true);
 CREATE POLICY "Allow public read custom_stages" ON public.custom_stages FOR SELECT USING (true);
 CREATE POLICY "Allow public write custom_subjects" ON public.custom_subjects FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public write custom_stages" ON public.custom_stages FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read multiplayer_rooms" ON public.multiplayer_rooms FOR SELECT USING (true);
+CREATE POLICY "Allow public write multiplayer_rooms" ON public.multiplayer_rooms FOR ALL USING (true) WITH CHECK (true);
 `;
 
 export default function AdminPage() {
