@@ -254,6 +254,7 @@ export default function Home() {
                   selectedSubject={selectedSubject}
                   onSelectSubject={(sub) => setSelectedSubject(sub)}
                   onStartStage={(stage) => setSelectedStage(stage)}
+                  onOpenProfile={() => setIsProfileOpen(true)}
                 />
 
                 {/* 3. Hierarchical Classification: Single Subject Header -> Chapter (e.g. Chapter One) -> Stages */}

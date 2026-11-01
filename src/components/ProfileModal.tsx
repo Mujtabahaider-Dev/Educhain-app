@@ -27,7 +27,7 @@ import {
   Languages,
   Award
 } from "lucide-react";
-import { ScholarAvatar } from "@/components/SleekIcon";
+import { ScholarAvatar, SleekIcon } from "@/components/SleekIcon";
 
 interface ProfileModalProps {
   onClose: () => void;
@@ -218,22 +218,60 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
         </div>
 
-        {/* Grade Selection */}
+        {/* Academic Enrolled Class Selection */}
         <div className="mb-6">
-          <label className="block text-xs font-mono text-neutral-500 dark:text-neutral-400 uppercase mb-1.5">
-            Curriculum Class / Grade
-          </label>
-          <select
-            value={tempGrade}
-            onChange={(e) => setTempGrade(e.target.value as GradeType)}
-            className="w-full px-3 py-2 rounded-lg bg-neutral-50 dark:bg-[#141414] border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white text-xs focus:outline-none focus:border-neutral-400 dark:focus:border-white/30"
-          >
-            {allClasses.map((cls) => (
-              <option key={cls.id} value={cls.id}>
-                {cls.icon} {cls.name} {cls.description ? `— ${cls.description}` : ""}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-xs font-mono text-neutral-500 dark:text-neutral-400 uppercase">
+              Enrolled Class / Grade
+            </label>
+            <span className="text-[10px] font-mono text-neutral-500">
+              Tailors curriculum on dashboard
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 no-scrollbar">
+            {allClasses.map((cls) => {
+              const isSelected = tempGrade === cls.id;
+              return (
+                <button
+                  key={cls.id}
+                  type="button"
+                  onClick={() => {
+                    setTempGrade(cls.id as GradeType);
+                    sound.playClick();
+                  }}
+                  className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all ${
+                    isSelected
+                      ? "border-black dark:border-white bg-black/[0.04] dark:bg-white/[0.06] shadow-xs"
+                      : "border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-[#141414]/50 hover:border-black/20 dark:hover:border-white/20"
+                  }`}
+                >
+                  <div
+                    className={`p-1.5 rounded-lg shrink-0 ${
+                      isSelected
+                        ? "bg-black text-white dark:bg-white dark:text-black"
+                        : "bg-neutral-200/70 dark:bg-white/10 text-neutral-600 dark:text-neutral-400"
+                    }`}
+                  >
+                    <SleekIcon name={cls.id || cls.icon} className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-neutral-900 dark:text-white truncate">
+                        {cls.name}
+                      </span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                    </div>
+                    {cls.description && (
+                      <p className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
+                        {cls.description}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* SIGN OUT BUTTON (Requested in Account Details Popup) */}

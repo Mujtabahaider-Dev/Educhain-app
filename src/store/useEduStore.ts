@@ -84,6 +84,18 @@ export const useEduStore = create<EduStoreState>()(
 
       setProfile: (name, avatar, grade, isGuest = false) => {
         set({ name, avatar, grade, isGuest });
+        const id = get().id;
+        if (id) {
+          supabase
+            .from("profiles")
+            .update({ 
+              player_name: name, 
+              player_avatar: avatar, 
+              player_grade: grade 
+            })
+            .eq("id", id)
+            .then();
+        }
       },
 
       setGrade: (grade) => {

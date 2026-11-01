@@ -13,6 +13,7 @@ interface NextQuestHeroProps {
   selectedSubject: string;
   onSelectSubject: (subject: string) => void;
   onStartStage: (stage: Stage) => void;
+  onOpenProfile?: () => void;
 }
 
 export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
@@ -20,8 +21,9 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
   selectedSubject,
   onSelectSubject,
   onStartStage,
+  onOpenProfile,
 }) => {
-  const { grade, setGrade, completedStages, subjectProgress } = useEduStore();
+  const { grade, completedStages, subjectProgress } = useEduStore();
   const { getAllSubjects, getAllClasses } = useCurriculumStore();
   const allClasses = getAllClasses();
   
@@ -50,40 +52,7 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
   return (
     <div className="space-y-6 mb-8">
       
-      {/* 1. Sleek Class Switcher Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 rounded-2xl bg-neutral-50/80 dark:bg-white/[0.02] border border-black/[0.05] dark:border-white/[0.06]">
-        <div className="flex items-center gap-2 px-2">
-          <GraduationCap className="w-4 h-4 text-neutral-500 shrink-0" />
-          <span className="text-xs font-mono font-semibold uppercase tracking-wider text-neutral-500 shrink-0">
-            Select Class:
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
-          {allClasses.map((cls) => {
-            const isActive = grade === cls.id;
-            return (
-              <button
-                key={cls.id}
-                onClick={() => {
-                  sound.playClick();
-                  setGrade(cls.id);
-                }}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 ${
-                  isActive
-                    ? "bg-black dark:bg-white text-white dark:text-black shadow-xs font-semibold"
-                    : "bg-white dark:bg-[#0c0c0e] text-neutral-600 dark:text-neutral-400 border border-black/[0.06] dark:border-white/[0.08] hover:text-black dark:hover:text-white"
-                }`}
-              >
-                <SleekIcon name={cls.id || cls.icon} className="w-3.5 h-3.5 shrink-0" />
-                <span>{cls.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 2. Hero Next Recommended Quest Card */}
+      {/* 1. Hero Next Recommended Quest Card */}
       {nextStage && (
         <div className="relative overflow-hidden rounded-3xl border border-black/[0.08] dark:border-white/[0.08] bg-white dark:bg-[#0c0c0e] p-6 sm:p-8 shadow-sm transition-all hover:border-black/15 dark:hover:border-white/15">
           
@@ -95,9 +64,23 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="max-w-xl space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-black/[0.06] dark:border-white/[0.08] bg-neutral-100/80 dark:bg-white/[0.04] text-[11px] font-mono text-neutral-700 dark:text-neutral-300">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: nextSubMeta?.color || "#38bdf8" }} />
-                <span className="font-semibold uppercase tracking-wider">{activeClassObj?.name || "Class"} • Next Quest</span>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-black/[0.06] dark:border-white/[0.08] bg-neutral-100/80 dark:bg-white/[0.04] text-[11px] font-mono text-neutral-700 dark:text-neutral-300">
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: nextSubMeta?.color || "#38bdf8" }} />
+                  <span className="font-semibold uppercase tracking-wider">{activeClassObj?.name || "Class"} Curriculum • Next Quest</span>
+                </div>
+
+                {onOpenProfile && (
+                  <button
+                    onClick={onOpenProfile}
+                    className="text-[11px] font-mono text-neutral-500 hover:text-black dark:hover:text-white flex items-center gap-1.5 transition-colors group"
+                    title="Change your enrolled grade in your Profile settings"
+                  >
+                    <SleekIcon name={activeClassObj?.id || activeClassObj?.icon} className="w-3.5 h-3.5 text-neutral-400 group-hover:text-black dark:group-hover:text-white" />
+                    <span>{activeClassObj?.name}</span>
+                    <span className="text-neutral-400 dark:text-neutral-600 group-hover:underline">• Change</span>
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-neutral-400">
@@ -128,7 +111,7 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
         </div>
       )}
 
-      {/* 3. Dead-Simple 1-Click Subject Switcher (Filtered by Student's Active Class) */}
+      {/* 2. Dead-Simple 1-Click Subject Switcher (Filtered by Student's Enrolled Class) */}
       <div className="pt-1">
         {classSubjects.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
@@ -170,10 +153,10 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
         ) : (
           <div className="p-6 rounded-2xl border border-dashed border-black/10 dark:border-white/10 bg-neutral-50/50 dark:bg-white/[0.01] text-center">
             <p className="text-xs font-mono text-neutral-500 mb-1">
-              No subjects registered yet for {activeClassObj?.name || "this class"}.
+              No subjects registered yet for {activeClassObj?.name || "your enrolled class"}.
             </p>
             <p className="text-[11px] text-neutral-400">
-              Select another class above or add subjects for {activeClassObj?.name} in the Admin Panel.
+              You can update your enrolled class in your Profile settings or add subjects in the Admin Panel.
             </p>
           </div>
         )}
