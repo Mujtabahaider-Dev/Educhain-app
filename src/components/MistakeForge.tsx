@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useEduStore } from "@/store/useEduStore";
 import { MistakeRecord, SubjectType } from "@/types/curriculum";
-import { SUBJECT_METADATA } from "@/data/constants";
+import { SUBJECT_METADATA, getSubjectMeta } from "@/data/constants";
 import { sound } from "@/lib/audio";
 import { 
   Hammer, 
@@ -163,7 +163,7 @@ export const MistakeForge: React.FC = () => {
         /* Mistake Cards Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredMistakes.map((item) => {
-            const meta = SUBJECT_METADATA[item.subject];
+            const meta = getSubjectMeta(item.subject);
             const isPracticing = activePracticingId === item.id;
 
             return (
@@ -180,10 +180,10 @@ export const MistakeForge: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <span
                       className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: meta.color }}
+                      style={{ backgroundColor: meta?.color || "#38bdf8" }}
                     />
                     <span className="text-[11px] font-mono uppercase text-neutral-500 dark:text-neutral-400">
-                      {meta.name} • Stage {item.stageId}
+                      {meta?.name || "Track"} • Stage {item.stageId}
                     </span>
                   </div>
 

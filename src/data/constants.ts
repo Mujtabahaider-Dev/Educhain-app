@@ -194,6 +194,36 @@ export const SUBJECT_METADATA: Record<SubjectType, {
   },
 };
 
+export const DEFAULT_SUBJECT_FALLBACK = {
+  name: "Curriculum Track",
+  color: "#38bdf8",
+  icon: "📚",
+  borderColor: "rgba(56, 189, 248, 0.3)",
+  badgeBg: "rgba(56, 189, 248, 0.1)",
+  description: "Curriculum Module",
+};
+
+export function getSubjectMeta(subjectId?: string): {
+  name: string;
+  color: string;
+  icon: string;
+  borderColor: string;
+  badgeBg: string;
+  description: string;
+} {
+  if (!subjectId) return DEFAULT_SUBJECT_FALLBACK;
+  const direct = SUBJECT_METADATA[subjectId as SubjectType];
+  if (direct) return direct;
+  return {
+    name: subjectId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    color: "#38bdf8",
+    icon: "📚",
+    borderColor: "rgba(56, 189, 248, 0.3)",
+    badgeBg: "rgba(56, 189, 248, 0.1)",
+    description: "Curriculum Track",
+  };
+}
+
 export const ACHIEVEMENTS: Achievement[] = [
   { id: "first_link", title: "First Link", desc: "Complete your first quiz stage with 70%+ score.", icon: "⛓️", xpReward: 50 },
   { id: "quick_thinker", title: "Quick Thinker", desc: "Answer a question correctly with 15+ seconds remaining.", icon: "⚡", xpReward: 50 },

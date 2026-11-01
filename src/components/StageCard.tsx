@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Stage } from "@/types/curriculum";
-import { SUBJECT_METADATA } from "@/data/constants";
+import { SUBJECT_METADATA, getSubjectMeta } from "@/data/constants";
 import { sound } from "@/lib/audio";
 import { Lock, CheckCircle2, Play, ChevronDown, ChevronUp, Info } from "lucide-react";
 
@@ -22,7 +22,7 @@ export const StageCard: React.FC<StageCardProps> = ({
   onSelect,
 }) => {
   const [showDetails, setShowDetails] = useState(false);
-  const meta = stage.subject ? SUBJECT_METADATA[stage.subject] : SUBJECT_METADATA.science;
+  const meta = getSubjectMeta(stage.subject);
 
   const handleClick = (e: React.MouseEvent) => {
     // If clicking the info toggle, don't trigger quiz
@@ -51,7 +51,7 @@ export const StageCard: React.FC<StageCardProps> = ({
           <div className="flex items-center gap-2">
             <span
               className="w-2 h-2 rounded-full shrink-0 ring-4 ring-neutral-100 dark:ring-white/5"
-              style={{ backgroundColor: meta.color }}
+              style={{ backgroundColor: meta?.color || "#38bdf8" }}
             />
             <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
               {stage.subjectName || "Track"} • Stage {stage.subjectStageNumber || stage.id}

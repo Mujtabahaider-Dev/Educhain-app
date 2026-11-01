@@ -266,13 +266,13 @@ export default function Home() {
                       {/* Single, Clean Subject Header */}
                       <div className="flex items-center justify-between pb-4 border-b border-black/[0.08] dark:border-white/[0.08]">
                         <div className="flex items-center gap-3">
-                          <SleekBadgeIcon name={group.subject} color={group.subjectMeta.color} size="lg" />
+                          <SleekBadgeIcon name={group.subject} color={group.subjectMeta?.color || "#38bdf8"} size="lg" />
                           <div>
                             <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white tracking-tight">
-                              {group.subjectMeta.name}
+                              {group.subjectMeta?.name || "Subject"}
                             </h2>
                             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                              {group.subjectMeta.description}
+                              {group.subjectMeta?.description || "Curriculum Track"}
                             </p>
                           </div>
                         </div>

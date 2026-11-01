@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from "react";
 import { useEduStore } from "@/store/useEduStore";
-import { SUBJECT_METADATA } from "@/data/constants";
+import { SUBJECT_METADATA, getSubjectMeta } from "@/data/constants";
 import { MistakeForge } from "@/components/MistakeForge";
 import { sound } from "@/lib/audio";
 import { 
@@ -52,7 +52,7 @@ export const AnalyticsView: React.FC = () => {
   // Compute subject accuracy
   const subjectStats = (["mathematics", "science", "english", "computer_science"] as const).map(
     (sub) => {
-      const meta = SUBJECT_METADATA[sub];
+      const meta = getSubjectMeta(sub);
       const attempts = quizHistory.filter((q) => q.subject === sub);
       const totalScore = attempts.reduce((acc, curr) => acc + curr.score, 0);
       const totalQs = attempts.reduce((acc, curr) => acc + curr.total, 0);
@@ -61,8 +61,8 @@ export const AnalyticsView: React.FC = () => {
 
       return {
         key: sub,
-        name: meta.name,
-        color: meta.color,
+        name: meta?.name || sub,
+        color: meta?.color || "#38bdf8",
         accuracy,
         quizzes: attempts.length,
         completedStages: completedCount,
