@@ -11,7 +11,6 @@ import {
   Zap, 
   Volume2, 
   VolumeX, 
-  Cloud, 
   BookOpen, 
   BarChart3, 
   Trophy, 
@@ -39,7 +38,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
 }) => {
   const { xp, currentStreak, settings, updateSettings, toggleTheme, mistakes, name, avatar, isGuest } = useEduStore();
-  const [syncing, setSyncing] = useState(false);
   const [hasSession, setHasSession] = useState(false);
 
   React.useEffect(() => {
@@ -71,14 +69,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleToggleTheme = () => {
     sound.playClick();
     toggleTheme();
-  };
-
-  const handleSimulateSync = () => {
-    setSyncing(true);
-    sound.playClick();
-    setTimeout(() => {
-      setSyncing(false);
-    }, 1200);
   };
 
   const isDark = settings.theme === "dark";
@@ -162,16 +152,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Right Status / Scholar Stats & Profile */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           
-          {/* Cloud Status Pill */}
-          <button
-            onClick={handleSimulateSync}
-            title="Supabase Cloud Status"
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-          >
-            <Cloud className={`w-3.5 h-3.5 ${syncing ? "animate-spin text-cyan-500" : "text-emerald-500 dark:text-emerald-400"}`} />
-            <span>{syncing ? "Syncing..." : "Cloud Active"}</span>
-          </button>
-
           {/* Streak Counter */}
           <div 
             title={`Current Streak: ${currentStreak} days`}

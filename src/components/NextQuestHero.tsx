@@ -64,23 +64,9 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="max-w-xl space-y-2">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-black/[0.06] dark:border-white/[0.08] bg-neutral-100/80 dark:bg-white/[0.04] text-[11px] font-mono text-neutral-700 dark:text-neutral-300">
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: nextSubMeta?.color || "#38bdf8" }} />
-                  <span className="font-semibold uppercase tracking-wider">{activeClassObj?.name || "Class"} Curriculum • Next Quest</span>
-                </div>
-
-                {onOpenProfile && (
-                  <button
-                    onClick={onOpenProfile}
-                    className="text-[11px] font-mono text-neutral-500 hover:text-black dark:hover:text-white flex items-center gap-1.5 transition-colors group"
-                    title="Change your enrolled grade in your Profile settings"
-                  >
-                    <SleekIcon name={activeClassObj?.id || activeClassObj?.icon} className="w-3.5 h-3.5 text-neutral-400 group-hover:text-black dark:group-hover:text-white" />
-                    <span>{activeClassObj?.name}</span>
-                    <span className="text-neutral-400 dark:text-neutral-600 group-hover:underline">• Change</span>
-                  </button>
-                )}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-black/[0.06] dark:border-white/[0.08] bg-neutral-100/80 dark:bg-white/[0.04] text-[11px] font-mono text-neutral-700 dark:text-neutral-300">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: nextSubMeta?.color || "#38bdf8" }} />
+                <span className="font-semibold uppercase tracking-wider">{activeClassObj?.name || "Class"} Curriculum • Next Quest</span>
               </div>
 
               <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-neutral-400">
