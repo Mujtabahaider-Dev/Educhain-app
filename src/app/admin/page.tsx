@@ -45,6 +45,7 @@ import {
   RotateCcw,
   GraduationCap
 } from "lucide-react";
+import { SleekIcon, SleekBadgeIcon } from "@/components/SleekIcon";
 
 const COLOR_PRESETS = [
   { label: "Sky Blue", value: "#38bdf8" },
@@ -1864,11 +1865,12 @@ export default function AdminPage() {
                       className="p-4 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-white/[0.02] flex flex-col justify-between"
                     >
                       <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-2xl">{sub.icon}</span>
+                        <div className="flex items-center justify-between mb-3">
+                          <SleekBadgeIcon name={sub.id} color={sub.color} size="md" />
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-neutral-700 dark:text-neutral-300">
-                              {classObj?.icon || "🎓"} {classObj?.name || "Class 9"}
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
+                              <SleekIcon name={classObj?.id || "class_9"} className="w-3 h-3" />
+                              <span>{classObj?.name || "Class 9"}</span>
                             </span>
                             <span 
                               className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold"
@@ -2066,9 +2068,7 @@ export default function AdminPage() {
                     >
                       <div>
                         <div className="flex items-center justify-between mb-3">
-                          <span className="text-3xl p-2 rounded-xl bg-white dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.05]">
-                            {cls.icon || "🎓"}
-                          </span>
+                          <SleekBadgeIcon name={cls.id || cls.icon} color="#38bdf8" size="lg" />
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-700 dark:text-cyan-400 font-bold border border-sky-500/20">
                             Order #{cls.displayOrder || 1}
                           </span>

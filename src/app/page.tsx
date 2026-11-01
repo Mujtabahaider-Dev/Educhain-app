@@ -12,6 +12,7 @@ import { AuthModal } from "@/components/AuthModal";
 import { LandingPage } from "@/components/LandingPage";
 import { HowItWorksBanner } from "@/components/HowItWorksBanner";
 import { NextQuestHero } from "@/components/NextQuestHero";
+import { SleekBadgeIcon } from "@/components/SleekIcon";
 import { useEduStore } from "@/store/useEduStore";
 import { useCurriculumStore } from "@/store/useCurriculumStore";
 import { supabase } from "@/lib/supabase/client";
@@ -264,7 +265,7 @@ export default function Home() {
                       {/* Single, Clean Subject Header */}
                       <div className="flex items-center justify-between pb-4 border-b border-black/[0.08] dark:border-white/[0.08]">
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl p-2 rounded-xl bg-neutral-100 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06]">{group.subjectMeta.icon}</span>
+                          <SleekBadgeIcon name={group.subject} color={group.subjectMeta.color} size="lg" />
                           <div>
                             <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white tracking-tight">
                               {group.subjectMeta.name}

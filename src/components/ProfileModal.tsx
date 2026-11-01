@@ -17,8 +17,17 @@ import {
   ShieldCheck, 
   Mail, 
   Sparkles,
-  Zap
+  Zap,
+  Shield,
+  Crown,
+  Terminal,
+  Atom,
+  Compass,
+  Calculator,
+  Languages,
+  Award
 } from "lucide-react";
+import { ScholarAvatar } from "@/components/SleekIcon";
 
 interface ProfileModalProps {
   onClose: () => void;
@@ -26,7 +35,18 @@ interface ProfileModalProps {
   onOpenAuth?: (mode?: "signin" | "signup") => void;
 }
 
-const AVATARS = ["🧠", "🦉", "🚀", "⚡", "🧬", "🧙‍♂️", "🎨", "🤖", "🛡️", "💎"];
+const AVATAR_GLYPHS = [
+  { id: "sparkles", label: "Sparkles", icon: Sparkles },
+  { id: "zap", label: "Energy", icon: Zap },
+  { id: "shield", label: "Guardian", icon: Shield },
+  { id: "crown", label: "Monarch", icon: Crown },
+  { id: "terminal", label: "Coder", icon: Terminal },
+  { id: "atom", label: "Scientist", icon: Atom },
+  { id: "compass", label: "Explorer", icon: Compass },
+  { id: "calculator", label: "Analyst", icon: Calculator },
+  { id: "languages", label: "Linguist", icon: Languages },
+  { id: "award", label: "Scholar", icon: Award },
+];
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ 
   onClose,
@@ -98,7 +118,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         <div className="mb-5 p-3.5 rounded-xl border border-neutral-200/80 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.02]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <span className="text-2xl">{tempAvatar}</span>
+              <ScholarAvatar name={tempName} avatar={tempAvatar} size="md" />
               <div>
                 <div className="text-sm font-semibold text-neutral-900 dark:text-white flex items-center gap-1.5">
                   <span>{name || "Scholar"}</span>
@@ -169,26 +189,32 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           />
         </div>
 
-        {/* Avatar Picker */}
+        {/* Avatar Glyph Picker */}
         <div className="mb-4">
           <label className="block text-xs font-mono text-neutral-500 dark:text-neutral-400 uppercase mb-1.5">
-            Select Avatar
+            Select Scholar Insignia
           </label>
           <div className="grid grid-cols-5 gap-2">
-            {AVATARS.map((av) => (
-              <button
-                key={av}
-                type="button"
-                onClick={() => { setTempAvatar(av); sound.playClick(); }}
-                className={`h-10 rounded-xl text-lg flex items-center justify-center transition-all ${
-                  tempAvatar === av
-                    ? "bg-black/10 dark:bg-white/20 border-2 border-black dark:border-white scale-105"
-                    : "bg-neutral-50 dark:bg-[#141414] border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10"
-                }`}
-              >
-                {av}
-              </button>
-            ))}
+            {AVATAR_GLYPHS.map((item) => {
+              const Icon = item.icon;
+              const isSelected = tempAvatar === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => { setTempAvatar(item.id); sound.playClick(); }}
+                  title={item.label}
+                  className={`h-11 rounded-xl flex flex-col items-center justify-center gap-1 transition-all border ${
+                    isSelected
+                      ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs scale-105"
+                      : "bg-neutral-50 dark:bg-[#141414] border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:border-black/20"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="text-[9px] font-mono leading-none">{item.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

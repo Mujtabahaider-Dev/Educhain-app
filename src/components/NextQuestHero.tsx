@@ -6,6 +6,7 @@ import { useEduStore } from "@/store/useEduStore";
 import { useCurriculumStore } from "@/store/useCurriculumStore";
 import { sound } from "@/lib/audio";
 import { Play, Sparkles, GraduationCap } from "lucide-react";
+import { SleekIcon, SleekBadgeIcon } from "@/components/SleekIcon";
 
 interface NextQuestHeroProps {
   stages: Stage[];
@@ -68,13 +69,13 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
                   sound.playClick();
                   setGrade(cls.id);
                 }}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 ${
                   isActive
                     ? "bg-black dark:bg-white text-white dark:text-black shadow-xs font-semibold"
                     : "bg-white dark:bg-[#0c0c0e] text-neutral-600 dark:text-neutral-400 border border-black/[0.06] dark:border-white/[0.08] hover:text-black dark:hover:text-white"
                 }`}
               >
-                <span>{cls.icon || "🎓"}</span>
+                <SleekIcon name={cls.id || cls.icon} className="w-3.5 h-3.5 shrink-0" />
                 <span>{cls.name}</span>
               </button>
             );
@@ -145,13 +146,13 @@ export const NextQuestHero: React.FC<NextQuestHeroProps> = ({
                     sound.playClick();
                     onSelectSubject(sub.id);
                   }}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-medium transition-all flex items-center gap-2.5 ${
+                  className={`px-3.5 py-2 rounded-2xl text-xs font-medium transition-all flex items-center gap-2.5 ${
                     isSelected
                       ? "bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 shadow-sm font-semibold"
                       : "bg-white dark:bg-[#0c0c0e] text-neutral-600 dark:text-neutral-400 border border-black/[0.06] dark:border-white/[0.08] hover:text-neutral-950 dark:hover:text-white hover:border-black/15 dark:hover:border-white/15"
                   }`}
                 >
-                  <span className="text-base">{sub.icon}</span>
+                  <SleekBadgeIcon name={sub.id} color={sub.color} size="sm" />
                   <span>{sub.name}</span>
                   <span
                     className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${

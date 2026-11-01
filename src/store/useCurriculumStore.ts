@@ -23,7 +23,7 @@ export const DEFAULT_SUBJECTS: CustomSubject[] = [
   {
     id: "computer_science",
     name: "Computer Science",
-    icon: "💻",
+    icon: "terminal",
     description: "Hardware Architecture, Binary Logic, Algorithms & Programming",
     color: "#fbbf24",
     badgeBg: "rgba(251, 191, 36, 0.1)",
@@ -33,7 +33,7 @@ export const DEFAULT_SUBJECTS: CustomSubject[] = [
   {
     id: "science",
     name: "Science",
-    icon: "🧬",
+    icon: "atom",
     description: "Physics, Chemistry, Atomic Structure & Cell Biology",
     color: "#34d399",
     badgeBg: "rgba(52, 211, 153, 0.1)",
@@ -43,7 +43,7 @@ export const DEFAULT_SUBJECTS: CustomSubject[] = [
   {
     id: "mathematics",
     name: "Mathematics",
-    icon: "📐",
+    icon: "calculator",
     description: "Arithmetic, Matrices, Real Numbers, Algebra & Geometry",
     color: "#38bdf8",
     badgeBg: "rgba(56, 189, 248, 0.1)",
@@ -53,7 +53,7 @@ export const DEFAULT_SUBJECTS: CustomSubject[] = [
   {
     id: "english",
     name: "English",
-    icon: "📖",
+    icon: "languages",
     description: "Grammar, Tenses, Voice, Narration & Literary Rhetoric",
     color: "#a78bfa",
     badgeBg: "rgba(167, 139, 250, 0.1)",

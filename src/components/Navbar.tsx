@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useEduStore } from "@/store/useEduStore";
 import { sound } from "@/lib/audio";
+import { ScholarAvatar } from "@/components/SleekIcon";
 import { RANKS } from "@/data/constants";
 import { 
   Flame, 
@@ -231,9 +232,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               sound.playClick();
             }}
             title="Account Details & Settings"
-            className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-neutral-200/80 dark:border-white/[0.12] bg-white dark:bg-[#0c0c0e] hover:border-neutral-300 dark:hover:border-white/20 transition-all text-xs font-medium shadow-xs"
+            className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full border border-neutral-200/80 dark:border-white/[0.12] bg-white dark:bg-[#0c0c0e] hover:border-neutral-300 dark:hover:border-white/20 transition-all text-xs font-medium shadow-xs"
           >
-            <span className="text-sm">{avatar || "👤"}</span>
+            <ScholarAvatar name={name} avatar={avatar} size="sm" />
             <span className="hidden sm:inline font-mono text-neutral-800 dark:text-neutral-200 font-semibold text-xs">
               {name || (isGuest ? "Guest Explorer" : "Scholar")}
             </span>
