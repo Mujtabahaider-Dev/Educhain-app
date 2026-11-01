@@ -29,12 +29,22 @@ export const EditStageModal: React.FC<EditStageModalProps> = ({
   onClose,
   onSaved,
 }) => {
-  const { updateStage, getAllSubjects } = useCurriculumStore();
+  const { updateStage, getAllSubjects, getAllClasses } = useCurriculumStore();
   const allSubjects = getAllSubjects();
+  const allClasses = getAllClasses();
 
   if (!isOpen || !stage) return null;
 
-  return <EditStageForm stage={stage} onClose={onClose} onSaved={onSaved} allSubjects={allSubjects} updateStage={updateStage} />;
+  return (
+    <EditStageForm
+      stage={stage}
+      onClose={onClose}
+      onSaved={onSaved}
+      allSubjects={allSubjects}
+      allClasses={allClasses}
+      updateStage={updateStage}
+    />
+  );
 };
 
 function EditStageForm({
@@ -42,12 +52,14 @@ function EditStageForm({
   onClose,
   onSaved,
   allSubjects,
+  allClasses,
   updateStage,
 }: {
   stage: Stage;
   onClose: () => void;
   onSaved: (title: string) => void;
   allSubjects: any[];
+  allClasses: any[];
   updateStage: any;
 }) {
   const [title, setTitle] = useState(stage.title || "");
@@ -218,7 +230,24 @@ function EditStageForm({
               Stage Classification
             </h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-mono font-semibold text-neutral-700 dark:text-neutral-300 uppercase mb-1">
+                  Class / Grade
+                </label>
+                <select
+                  value={grade}
+                  onChange={(e) => setGrade(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-black text-xs font-medium"
+                >
+                  {allClasses.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.icon} {cls.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-mono font-semibold text-neutral-700 dark:text-neutral-300 uppercase mb-1">
                   Subject

@@ -1,6 +1,15 @@
-export type SubjectType = "mathematics" | "science" | "english" | "computer_science";
+export type SubjectType = "mathematics" | "science" | "english" | "computer_science" | (string & {});
 
-export type GradeType = "grade_9" | "grade_10" | "grade_11" | "grade_12";
+export type GradeType = "grade_9" | "grade_10" | "grade_11" | "grade_12" | (string & {});
+
+export interface SchoolClass {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  displayOrder?: number;
+  created_at?: string;
+}
 
 export type StreamDomainId = "stem_science" | "mathematics_stream" | "humanities_languages";
 

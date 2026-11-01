@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useEduStore } from "@/store/useEduStore";
+import { useCurriculumStore } from "@/store/useCurriculumStore";
 import { GradeType } from "@/types/curriculum";
 import { GRADE_LABELS, RANKS } from "@/data/constants";
 import { sound } from "@/lib/audio";
@@ -33,6 +34,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onOpenAuth
 }) => {
   const { name, avatar, grade, xp, isGuest, setProfile, resetProgress, signOut } = useEduStore();
+  const { getAllClasses } = useCurriculumStore();
+  const allClasses = getAllClasses();
   const [tempName, setTempName] = useState(name || "Scholar");
   const [tempAvatar, setTempAvatar] = useState(avatar || "🧠");
   const [tempGrade, setTempGrade] = useState<GradeType>(grade || "grade_9");
@@ -192,16 +195,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         {/* Grade Selection */}
         <div className="mb-6">
           <label className="block text-xs font-mono text-neutral-500 dark:text-neutral-400 uppercase mb-1.5">
-            Curriculum Grade
+            Curriculum Class / Grade
           </label>
           <select
             value={tempGrade}
             onChange={(e) => setTempGrade(e.target.value as GradeType)}
             className="w-full px-3 py-2 rounded-lg bg-neutral-50 dark:bg-[#141414] border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white text-xs focus:outline-none focus:border-neutral-400 dark:focus:border-white/30"
           >
-            {Object.entries(GRADE_LABELS).map(([k, label]) => (
-              <option key={k} value={k}>
-                {label}
+            {allClasses.map((cls) => (
+              <option key={cls.id} value={cls.id}>
+                {cls.icon} {cls.name} {cls.description ? `— ${cls.description}` : ""}
               </option>
             ))}
           </select>

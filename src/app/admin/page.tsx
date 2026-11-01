@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useCurriculumStore, CustomSubject } from "@/store/useCurriculumStore";
-import { Question, Stage, SubjectType } from "@/types/curriculum";
+import { Question, Stage, SubjectType, SchoolClass } from "@/types/curriculum";
 import { sound } from "@/lib/audio";
 import { EditStageModal } from "@/components/admin/EditStageModal";
 import { EditSubjectModal } from "@/components/admin/EditSubjectModal";
+import { EditClassModal } from "@/components/admin/EditClassModal";
 import { UsersManager } from "@/components/admin/UsersManager";
 import { 
   Plus, 
@@ -41,7 +42,8 @@ import {
   LogOut,
   Search,
   Filter,
-  RotateCcw
+  RotateCcw,
+  GraduationCap
 } from "lucide-react";
 
 const COLOR_PRESETS = [
@@ -55,8 +57,19 @@ const COLOR_PRESETS = [
   { label: "Orange", value: "#f97316" },
 ];
 
-const SUPABASE_SQL_SCRIPT = `-- Run this in Supabase SQL Editor (supabase.com/dashboard/project/elpzdzevtwinoaspyngi/sql/new) to enable cloud storage for MCQs:
+const SUPABASE_SQL_SCRIPT = `-- Run this in Supabase SQL Editor (supabase.com/dashboard/project/elpzdzevtwinoaspyngi/sql/new) to enable cloud storage for Classes, Subjects & MCQs:
 
+-- 1. Create table for Custom Classes / Standards
+CREATE TABLE IF NOT EXISTS public.custom_classes (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  icon TEXT DEFAULT '🎓',
+  display_order INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 2. Create / Update table for Custom Subjects (with grade/class link)
 CREATE TABLE IF NOT EXISTS public.custom_subjects (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -65,9 +78,14 @@ CREATE TABLE IF NOT EXISTS public.custom_subjects (
   color TEXT DEFAULT '#38bdf8',
   badge_bg TEXT,
   border_color TEXT,
+  grade TEXT DEFAULT 'grade_9',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+ALTER TABLE public.custom_subjects 
+ADD COLUMN IF NOT EXISTS grade TEXT DEFAULT 'grade_9';
+
+-- 3. Create table for Custom Stages & MCQs
 CREATE TABLE IF NOT EXISTS public.custom_stages (
   id TEXT PRIMARY KEY,
   subject_id TEXT NOT NULL,
@@ -85,7 +103,7 @@ CREATE TABLE IF NOT EXISTS public.custom_stages (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. Create table for multiplayer rooms
+-- 4. Create table for multiplayer rooms
 CREATE TABLE IF NOT EXISTS public.multiplayer_rooms (
   id TEXT PRIMARY KEY,
   room_code TEXT UNIQUE NOT NULL,
@@ -107,7 +125,15 @@ CREATE TABLE IF NOT EXISTS public.multiplayer_rooms (
 );
 
 -- Enable RLS and public policies (safe idempotent rerun)
+ALTER TABLE public.custom_classes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.custom_subjects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.custom_stages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.multiplayer_rooms ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read custom_classes" ON public.custom_classes;
+DROP POLICY IF EXISTS "Allow public write custom_classes" ON public.custom_classes;
+CREATE POLICY "Allow public read custom_classes" ON public.custom_classes FOR SELECT USING (true);
+CREATE POLICY "Allow public write custom_classes" ON public.custom_classes FOR ALL USING (true);
 ALTER TABLE public.custom_stages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.multiplayer_rooms ENABLE ROW LEVEL SECURITY;
 
@@ -128,6 +154,14 @@ CREATE POLICY "Allow public write multiplayer_rooms" ON public.multiplayer_rooms
 
 export default function AdminPage() {
   const { 
+    customClasses,
+    deletedClassIds,
+    addClass,
+    updateClass,
+    deleteClass,
+    restoreClass,
+    restoreAllDefaultClasses,
+    getAllClasses,
     customSubjects, 
     customStages, 
     getAllSubjects, 
@@ -145,7 +179,7 @@ export default function AdminPage() {
     cloudSyncMessage
   } = useCurriculumStore();
 
-  const [activeTab, setActiveTab] = useState<"csv" | "upload" | "subjects" | "manage" | "users" | "sql">("csv");
+  const [activeTab, setActiveTab] = useState<"csv" | "upload" | "subjects" | "classes" | "manage" | "users" | "sql">("csv");
   const [copiedSql, setCopiedSql] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [isPushingCloud, setIsPushingCloud] = useState(false);
@@ -161,10 +195,14 @@ export default function AdminPage() {
   const [isEditStageOpen, setIsEditStageOpen] = useState<boolean>(false);
   const [editingSubject, setEditingSubject] = useState<CustomSubject | null>(null);
   const [isEditSubjectOpen, setIsEditSubjectOpen] = useState<boolean>(false);
+  const [editingClass, setEditingClass] = useState<SchoolClass | null>(null);
+  const [isEditClassOpen, setIsEditClassOpen] = useState<boolean>(false);
 
   // Filter in Stage Catalog
   const [stageFilterSubject, setStageFilterSubject] = useState<string>("all");
+  const [stageFilterClass, setStageFilterClass] = useState<string>("all");
   const [stageSearch, setStageSearch] = useState<string>("");
+  const [subjectClassFilter, setSubjectClassFilter] = useState<string>("all");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -201,6 +239,7 @@ export default function AdminPage() {
     showNotification("Admin panel locked.");
   };
 
+  const allClasses = getAllClasses();
   const allSubjects = getAllSubjects();
 
   // Manual Form State
@@ -250,9 +289,17 @@ export default function AdminPage() {
   // Form State for New Subject Modal/Section
   const [newSubId, setNewSubId] = useState("");
   const [newSubName, setNewSubName] = useState("");
+  const [newSubGrade, setNewSubGrade] = useState("grade_9");
   const [newSubIcon, setNewSubIcon] = useState("📚");
   const [newSubDesc, setNewSubDesc] = useState("");
   const [newSubColor, setNewSubColor] = useState("#38bdf8");
+
+  // Form State for New Class / Standards
+  const [newClassId, setNewClassId] = useState("");
+  const [newClassName, setNewClassName] = useState("");
+  const [newClassDesc, setNewClassDesc] = useState("");
+  const [newClassIcon, setNewClassIcon] = useState("🎓");
+  const [newClassOrder, setNewClassOrder] = useState<number>(1);
 
   useEffect(() => {
     checkSupabaseHealth();
@@ -622,6 +669,7 @@ export default function AdminPage() {
       icon: newSubIcon.trim() || "📚",
       description: newSubDesc.trim() || `${newSubName.trim()} curriculum tracks`,
       color: newSubColor,
+      grade: newSubGrade || "grade_9",
     };
 
     const res = await addSubject(newSubject);
@@ -639,6 +687,33 @@ export default function AdminPage() {
     setNewSubId("");
     setNewSubDesc("");
     setActiveTab("csv");
+  };
+
+  const handleCreateClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClassName.trim()) {
+      showNotification("Class name is required.", "error");
+      return;
+    }
+    const cleanId = newClassId.trim() || newClassName.toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const res = await addClass({
+      id: cleanId,
+      name: newClassName.trim(),
+      description: newClassDesc.trim(),
+      icon: newClassIcon.trim() || "🎓",
+      displayOrder: Number(newClassOrder) || 1,
+    });
+
+    if (res.success) {
+      sound.playUnlock();
+      showNotification(`Class / Standard "${newClassName.trim()}" created successfully!`);
+      setNewClassName("");
+      setNewClassId("");
+      setNewClassDesc("");
+      setNewClassIcon("🎓");
+    } else {
+      showNotification(res.error || "Failed to create class", "error");
+    }
   };
 
   const copySql = () => {
@@ -884,7 +959,8 @@ export default function AdminPage() {
             { id: "csv", label: "Upload via CSV File", icon: FileSpreadsheet },
             { id: "upload", label: "Manual Form MCQ Builder", icon: Plus },
             { id: "manage", label: `Manage Stages (${customStages.length} Custom)`, icon: BookOpen },
-            { id: "subjects", label: "Create / Manage Subjects", icon: Layers },
+            { id: "subjects", label: `Manage Subjects (${allSubjects.length})`, icon: Layers },
+            { id: "classes", label: `Manage Classes (${allClasses.length})`, icon: GraduationCap },
             { id: "users", label: "Scholars & Users Data", icon: Users },
             { id: "sql", label: "Supabase Cloud Setup", icon: Database },
           ].map((tab) => {
@@ -939,9 +1015,43 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* Classification Fields: Subject, Chapter & Topic (REQUIRED) */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Classification Fields: Class, Subject, Chapter & Topic (REQUIRED) */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 
+                {/* Class Selector */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-mono font-semibold text-neutral-700 dark:text-neutral-300 uppercase">
+                      Class / Grade <span className="text-rose-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("classes")}
+                      className="text-[11px] text-sky-600 dark:text-cyan-400 hover:underline"
+                    >
+                      + New Class
+                    </button>
+                  </div>
+                  <select
+                    value={csvGrade}
+                    onChange={(e) => {
+                      const newG = e.target.value;
+                      setCsvGrade(newG);
+                      const matchingSubs = allSubjects.filter((s) => (s.grade || "grade_9") === newG);
+                      if (matchingSubs.length > 0) {
+                        setCsvSubjectId(matchingSubs[0].id);
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-[#141414] text-xs font-semibold focus:outline-none"
+                  >
+                    {allClasses.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.icon} {cls.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Subject Selector */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -950,7 +1060,10 @@ export default function AdminPage() {
                     </label>
                     <button
                       type="button"
-                      onClick={() => setActiveTab("subjects")}
+                      onClick={() => {
+                        setNewSubGrade(csvGrade);
+                        setActiveTab("subjects");
+                      }}
                       className="text-[11px] text-sky-600 dark:text-cyan-400 hover:underline"
                     >
                       + New Subject
@@ -961,11 +1074,21 @@ export default function AdminPage() {
                     onChange={(e) => setCsvSubjectId(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-[#141414] text-xs font-semibold focus:outline-none"
                   >
-                    {allSubjects.map((sub) => (
-                      <option key={sub.id} value={sub.id}>
-                        {sub.icon} {sub.name}
-                      </option>
-                    ))}
+                    {allSubjects.filter((s) => (s.grade || "grade_9") === csvGrade).length > 0 ? (
+                      allSubjects
+                        .filter((s) => (s.grade || "grade_9") === csvGrade)
+                        .map((sub) => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.icon} {sub.name}
+                          </option>
+                        ))
+                    ) : (
+                      allSubjects.map((sub) => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.icon} {sub.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -1199,8 +1322,42 @@ export default function AdminPage() {
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 
+                {/* Class Selector */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-mono font-semibold text-neutral-700 dark:text-neutral-300 uppercase">
+                      Class / Grade <span className="text-rose-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("classes")}
+                      className="text-[11px] text-sky-600 dark:text-cyan-400 hover:underline"
+                    >
+                      + New Class
+                    </button>
+                  </div>
+                  <select
+                    value={grade}
+                    onChange={(e) => {
+                      const newG = e.target.value;
+                      setGrade(newG);
+                      const matchingSubs = allSubjects.filter((s) => (s.grade || "grade_9") === newG);
+                      if (matchingSubs.length > 0) {
+                        setSubjectId(matchingSubs[0].id);
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-[#141414] text-xs font-semibold focus:outline-none"
+                  >
+                    {allClasses.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.icon} {cls.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Subject Selector */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -1209,7 +1366,10 @@ export default function AdminPage() {
                     </label>
                     <button
                       type="button"
-                      onClick={() => setActiveTab("subjects")}
+                      onClick={() => {
+                        setNewSubGrade(grade);
+                        setActiveTab("subjects");
+                      }}
                       className="text-[11px] text-sky-600 dark:text-cyan-400 hover:underline"
                     >
                       + New Subject
@@ -1220,11 +1380,21 @@ export default function AdminPage() {
                     onChange={(e) => setSubjectId(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-[#141414] text-xs font-semibold focus:outline-none focus:border-neutral-400 dark:focus:border-white/30"
                   >
-                    {allSubjects.map((sub) => (
-                      <option key={sub.id} value={sub.id}>
-                        {sub.icon} {sub.name}
-                      </option>
-                    ))}
+                    {allSubjects.filter((s) => (s.grade || "grade_9") === grade).length > 0 ? (
+                      allSubjects
+                        .filter((s) => (s.grade || "grade_9") === grade)
+                        .map((sub) => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.icon} {sub.name}
+                          </option>
+                        ))
+                    ) : (
+                      allSubjects.map((sub) => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.icon} {sub.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -1504,7 +1674,7 @@ export default function AdminPage() {
               </p>
 
               <form onSubmit={handleCreateSubject} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                   
                   <div>
                     <label className="block text-xs font-mono font-semibold uppercase mb-1.5">
@@ -1523,6 +1693,23 @@ export default function AdminPage() {
                       }}
                       className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-[#141414] text-xs focus:outline-none"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono font-semibold uppercase mb-1.5">
+                      Target Class <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={newSubGrade}
+                      onChange={(e) => setNewSubGrade(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-[#141414] text-xs font-semibold focus:outline-none"
+                    >
+                      {allClasses.map((cls) => (
+                        <option key={cls.id} value={cls.id}>
+                          {cls.icon} {cls.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
@@ -1629,10 +1816,47 @@ export default function AdminPage() {
                 )}
               </div>
 
+              {/* Filter by Class */}
+              <div className="flex flex-wrap items-center gap-1.5 mb-6 pb-3 border-b border-neutral-100 dark:border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setSubjectClassFilter("all")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                    subjectClassFilter === "all"
+                      ? "bg-black dark:bg-white text-white dark:text-black font-semibold shadow-xs"
+                      : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                  }`}
+                >
+                  All Classes ({allSubjects.length})
+                </button>
+                {allClasses.map((cls) => {
+                  const count = allSubjects.filter((s) => (s.grade || "grade_9") === cls.id).length;
+                  return (
+                    <button
+                      key={cls.id}
+                      type="button"
+                      onClick={() => setSubjectClassFilter(cls.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                        subjectClassFilter === cls.id
+                          ? "bg-black dark:bg-white text-white dark:text-black font-semibold shadow-xs"
+                          : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                      }`}
+                    >
+                      <span>{cls.icon}</span>
+                      <span>{cls.name}</span>
+                      <span className="text-[10px] opacity-70">({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {allSubjects.map((sub) => {
+                {allSubjects
+                  .filter((sub) => subjectClassFilter === "all" || (sub.grade || "grade_9") === subjectClassFilter)
+                  .map((sub) => {
                   const isCustom = customSubjects.some((cs) => cs.id === sub.id);
                   const stageCount = getAllStages().filter((s) => s.subject === sub.id).length;
+                  const classObj = allClasses.find((c) => c.id === (sub.grade || "grade_9"));
 
                   return (
                     <div 
@@ -1642,12 +1866,17 @@ export default function AdminPage() {
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-2xl">{sub.icon}</span>
-                          <span 
-                            className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold"
-                            style={{ backgroundColor: `${sub.color}20`, color: sub.color }}
-                          >
-                            {stageCount} Stages
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-neutral-700 dark:text-neutral-300">
+                              {classObj?.icon || "🎓"} {classObj?.name || "Class 9"}
+                            </span>
+                            <span 
+                              className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold"
+                              style={{ backgroundColor: `${sub.color}20`, color: sub.color }}
+                            >
+                              {stageCount} Stages
+                            </span>
+                          </div>
                         </div>
                         <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
                           {sub.name}
@@ -1681,6 +1910,209 @@ export default function AdminPage() {
                           }}
                           className="text-xs text-rose-500 hover:text-rose-700 font-mono flex items-center gap-1 font-semibold"
                           title="Delete Subject"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB: MANAGE CLASSES / STANDARDS */}
+        {/* ======================================================== */}
+        {activeTab === "classes" && (
+          <div className="space-y-8 animate-in fade-in duration-200">
+            
+            {/* Create Class Form */}
+            <div className="p-6 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a] shadow-sm">
+              <h3 className="text-base font-bold text-neutral-900 dark:text-white mb-1 flex items-center gap-2">
+                <GraduationCap className="w-5 h-5 text-sky-500" />
+                <span>Create New Class / Standard</span>
+              </h3>
+              <p className="text-xs text-neutral-500 mb-6">
+                Add standard educational tiers (e.g., Class 8, Matric Part II, FSc Pre-Engineering, O-Levels, A-Levels). Subjects and syllabus stages are classified under their respective classes.
+              </p>
+
+              <form onSubmit={handleCreateClass} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  
+                  <div>
+                    <label className="block text-xs font-mono font-semibold uppercase mb-1.5">
+                      Class Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Class 8"
+                      value={newClassName}
+                      onChange={(e) => {
+                        setNewClassName(e.target.value);
+                        if (!newClassId) {
+                          setNewClassId(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, "_"));
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-[#141414] text-xs focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono font-semibold uppercase mb-1.5">
+                      Class ID (Slug)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. class_8"
+                      value={newClassId}
+                      onChange={(e) => setNewClassId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-[#141414] text-xs font-mono focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono font-semibold uppercase mb-1.5">
+                      Icon / Emoji
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 🎒 or 🎓 or ⚡"
+                      value={newClassIcon}
+                      onChange={(e) => setNewClassIcon(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-[#141414] text-xs focus:outline-none text-center"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono font-semibold uppercase mb-1.5">
+                      Display Order Priority
+                    </label>
+                    <input
+                      type="number"
+                      value={newClassOrder}
+                      onChange={(e) => setNewClassOrder(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-[#141414] text-xs focus:outline-none"
+                    />
+                  </div>
+
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono font-semibold uppercase mb-1.5">
+                    Description / Certificate Level
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Secondary School Certificate (SSC Part I) / Middle School"
+                    value={newClassDesc}
+                    onChange={(e) => setNewClassDesc(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-[#141414] text-xs focus:outline-none"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="btn-vercel-primary px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Class Standard</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* List of Existing Classes */}
+            <div className="p-6 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0a0a0a]">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    Active Educational Classes ({allClasses.length})
+                  </h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Manage classes, assign subjects, or edit certificate labels.
+                  </p>
+                </div>
+
+                {deletedClassIds && deletedClassIds.length > 0 && (
+                  <button
+                    onClick={() => {
+                      sound.playClick();
+                      restoreAllDefaultClasses();
+                      showNotification("Restored default classes!");
+                    }}
+                    className="btn-vercel-secondary text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-bold"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Restore Defaults ({deletedClassIds.length} hidden)</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {allClasses.map((cls) => {
+                  const classSubjects = allSubjects.filter((s) => (s.grade || "grade_9") === cls.id);
+                  const classStages = getAllStages().filter((s) => (s.grade || "grade_9") === cls.id);
+
+                  return (
+                    <div 
+                      key={cls.id}
+                      className="p-5 rounded-2xl border border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-white/[0.02] flex flex-col justify-between hover:border-black/20 dark:hover:border-white/20 transition-all"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-3xl p-2 rounded-xl bg-white dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.05]">
+                            {cls.icon || "🎓"}
+                          </span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-700 dark:text-cyan-400 font-bold border border-sky-500/20">
+                            Order #{cls.displayOrder || 1}
+                          </span>
+                        </div>
+                        
+                        <h4 className="text-base font-bold text-neutral-900 dark:text-white">
+                          {cls.name}
+                        </h4>
+                        
+                        <p className="text-xs text-neutral-500 line-clamp-2 mt-1 mb-4 leading-relaxed">
+                          {cls.description || "Curriculum Standard Class"}
+                        </p>
+
+                        <div className="flex items-center gap-2 pt-2 border-t border-neutral-200/50 dark:border-white/5 text-[11px] font-mono text-neutral-600 dark:text-neutral-400">
+                          <span className="font-semibold text-neutral-900 dark:text-white">{classSubjects.length}</span> Subjects
+                          <span>•</span>
+                          <span className="font-semibold text-neutral-900 dark:text-white">{classStages.length}</span> Stages
+                        </div>
+                      </div>
+
+                      <div className="mt-5 pt-3 border-t border-neutral-200/60 dark:border-white/5 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            sound.playClick();
+                            setEditingClass(cls);
+                            setIsEditClassOpen(true);
+                          }}
+                          className="text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 font-semibold"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete class "${cls.name}"?`)) {
+                              deleteClass(cls.id);
+                              sound.playClick();
+                              showNotification(`Class "${cls.name}" deleted.`);
+                            }
+                          }}
+                          className="text-xs text-rose-500 hover:text-rose-700 font-mono flex items-center gap-1 font-semibold"
+                          title="Delete Class"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           <span>Delete</span>
@@ -1741,20 +2173,38 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-neutral-500 font-mono">Subject:</span>
-                <select
-                  value={stageFilterSubject}
-                  onChange={(e) => setStageFilterSubject(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.03] text-xs font-medium"
-                >
-                  <option value="all">All Subjects</option>
-                  {allSubjects.map((sub) => (
-                    <option key={sub.id} value={sub.id}>
-                      {sub.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-neutral-500 font-mono">Class:</span>
+                  <select
+                    value={stageFilterClass}
+                    onChange={(e) => setStageFilterClass(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.03] text-xs font-medium"
+                  >
+                    <option value="all">All Classes</option>
+                    {allClasses.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.icon} {cls.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-neutral-500 font-mono">Subject:</span>
+                  <select
+                    value={stageFilterSubject}
+                    onChange={(e) => setStageFilterSubject(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.03] text-xs font-medium"
+                  >
+                    <option value="all">All Subjects</option>
+                    {allSubjects.map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -1763,7 +2213,7 @@ export default function AdminPage() {
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.02] text-neutral-500 font-mono">
                   <tr>
-                    <th className="py-3 px-4">Subject</th>
+                    <th className="py-3 px-4">Class / Subject</th>
                     <th className="py-3 px-4">Chapter</th>
                     <th className="py-3 px-4">Stage Title / Topic</th>
                     <th className="py-3 px-4 text-center">MCQs</th>
@@ -1774,19 +2224,26 @@ export default function AdminPage() {
                 <tbody className="divide-y divide-neutral-100 dark:divide-white/[0.04]">
                   {getAllStages()
                     .filter((stage) => {
+                      const matchesClass = stageFilterClass === "all" || (stage.grade || "grade_9") === stageFilterClass;
                       const matchesSub = stageFilterSubject === "all" || stage.subject === stageFilterSubject;
                       const matchesSearch = stage.title.toLowerCase().includes(stageSearch.toLowerCase()) ||
                         (stage.chapter || "").toLowerCase().includes(stageSearch.toLowerCase()) ||
                         (stage.topic || "").toLowerCase().includes(stageSearch.toLowerCase());
-                      return matchesSub && matchesSearch;
+                      return matchesClass && matchesSub && matchesSearch;
                     })
                     .map((stage) => {
                       const isCustom = customStages.some((cs) => String(cs.id) === String(stage.id));
+                      const classObj = allClasses.find((c) => c.id === (stage.grade || "grade_9"));
 
                       return (
-                        <tr key={stage.id} className="hover:bg-neutral-50 dark:hover:bg-white/[0.02]">
-                          <td className="py-3 px-4 font-mono font-semibold text-neutral-800 dark:text-neutral-200 capitalize">
-                            {stage.subjectName || stage.subject?.replace("_", " ")}
+                        <tr key={String(stage.id)} className="hover:bg-neutral-50/60 dark:hover:bg-white/[0.02] transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                              <span>{stage.subjectName || stage.subject}</span>
+                            </div>
+                            <span className="text-[10px] font-mono text-neutral-400">
+                              {classObj?.name || "Class 9"} • Stage #{stage.subjectStageNumber || stage.id}
+                            </span>
                           </td>
                           <td className="py-3 px-4 text-neutral-600 dark:text-neutral-400">
                             {stage.chapter}
@@ -1987,6 +2444,19 @@ export default function AdminPage() {
         }}
         onSaved={(name) => {
           showNotification(`Subject "${name}" updated successfully!`);
+        }}
+      />
+
+      {/* Edit Class Modal */}
+      <EditClassModal
+        isOpen={isEditClassOpen}
+        schoolClass={editingClass}
+        onClose={() => {
+          setIsEditClassOpen(false);
+          setEditingClass(null);
+        }}
+        onSaved={(name) => {
+          showNotification(`Class "${name}" updated successfully!`);
         }}
       />
 

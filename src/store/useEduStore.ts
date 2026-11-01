@@ -14,6 +14,7 @@ interface EduStoreState extends UserState {
   
   // Actions
   setProfile: (name: string, avatar: string, grade: GradeType, isGuest?: boolean) => void;
+  setGrade: (grade: GradeType) => void;
   loadCloudProfile: (cloudData: Partial<UserState>) => void;
   setGuestSession: () => void;
   signOut: () => void;
@@ -83,6 +84,14 @@ export const useEduStore = create<EduStoreState>()(
 
       setProfile: (name, avatar, grade, isGuest = false) => {
         set({ name, avatar, grade, isGuest });
+      },
+
+      setGrade: (grade) => {
+        set({ grade });
+        const id = get().id;
+        if (id) {
+          supabase.from("profiles").update({ player_grade: grade }).eq("id", id).then();
+        }
       },
 
       loadCloudProfile: (cloudData) => {

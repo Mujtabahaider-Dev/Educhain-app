@@ -2,9 +2,9 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Stage, SubjectType, Question } from "@/types/curriculum";
+import { Stage, SubjectType, Question, SchoolClass } from "@/types/curriculum";
 import { STAGES_DATA } from "@/data/curriculum";
-import { SUBJECT_METADATA } from "@/data/constants";
+import { SUBJECT_METADATA, DEFAULT_CLASSES } from "@/data/constants";
 import { supabase } from "@/lib/supabase/client";
 
 export interface CustomSubject {
@@ -15,6 +15,7 @@ export interface CustomSubject {
   color: string;
   badgeBg?: string;
   borderColor?: string;
+  grade?: string; // Links subject to a Class / Grade (e.g. "grade_9", "grade_10")
   created_at?: string;
 }
 
@@ -27,6 +28,7 @@ export const DEFAULT_SUBJECTS: CustomSubject[] = [
     color: "#fbbf24",
     badgeBg: "rgba(251, 191, 36, 0.1)",
     borderColor: "rgba(251, 191, 36, 0.3)",
+    grade: "grade_9",
   },
   {
     id: "science",
@@ -36,6 +38,7 @@ export const DEFAULT_SUBJECTS: CustomSubject[] = [
     color: "#34d399",
     badgeBg: "rgba(52, 211, 153, 0.1)",
     borderColor: "rgba(52, 211, 153, 0.3)",
+    grade: "grade_9",
   },
   {
     id: "mathematics",
@@ -45,6 +48,7 @@ export const DEFAULT_SUBJECTS: CustomSubject[] = [
     color: "#38bdf8",
     badgeBg: "rgba(56, 189, 248, 0.1)",
     borderColor: "rgba(56, 189, 248, 0.3)",
+    grade: "grade_9",
   },
   {
     id: "english",
@@ -54,10 +58,13 @@ export const DEFAULT_SUBJECTS: CustomSubject[] = [
     color: "#a78bfa",
     badgeBg: "rgba(167, 139, 250, 0.1)",
     borderColor: "rgba(167, 139, 250, 0.3)",
+    grade: "grade_9",
   },
 ];
 
 interface CurriculumStoreState {
+  customClasses: SchoolClass[];
+  deletedClassIds: string[];
   customSubjects: CustomSubject[];
   customStages: Stage[];
   deletedSubjectIds: string[];
@@ -67,7 +74,13 @@ interface CurriculumStoreState {
   
   // Actions
   checkSupabaseHealth: () => Promise<boolean>;
-  pushLocalToCloud: () => Promise<{ success: boolean; stagesSynced: number; subjectsSynced: number; error?: string }>;
+  pushLocalToCloud: () => Promise<{ success: boolean; stagesSynced: number; subjectsSynced: number; classesSynced: number; error?: string }>;
+  addClass: (cls: SchoolClass) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
+  updateClass: (classId: string, updatedData: Partial<SchoolClass>) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
+  deleteClass: (classId: string) => Promise<{ success: boolean; error?: string }>;
+  restoreClass: (classId: string) => Promise<{ success: boolean }>;
+  restoreAllDefaultClasses: () => void;
+  getAllClasses: () => SchoolClass[];
   addSubject: (subject: CustomSubject) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
   updateSubject: (subjectId: string, updatedData: Partial<CustomSubject>) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
   addStage: (stage: Stage) => Promise<{ success: boolean; cloudSynced: boolean; error?: string }>;
@@ -77,13 +90,15 @@ interface CurriculumStoreState {
   restoreSubject: (subjectId: string) => Promise<{ success: boolean }>;
   restoreAllDefaultSubjects: () => void;
   syncWithSupabase: () => Promise<void>;
-  getAllSubjects: () => CustomSubject[];
+  getAllSubjects: (grade?: string) => CustomSubject[];
   getAllStages: () => Stage[];
 }
 
 export const useCurriculumStore = create<CurriculumStoreState>()(
   persist(
     (set, get) => ({
+      customClasses: [],
+      deletedClassIds: [],
       customSubjects: [],
       customStages: [],
       deletedSubjectIds: [],
@@ -115,12 +130,144 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
         }
       },
 
-      pushLocalToCloud: async () => {
-        const { customSubjects, customStages } = get();
-        let stagesCount = 0;
-        let subjectsCount = 0;
+      getAllClasses: () => {
+        const { customClasses, deletedClassIds = [] } = get();
+        const deletedSet = new Set(deletedClassIds);
+        const customIds = new Set(customClasses.map((c) => c.id));
+        const filteredDefaults = DEFAULT_CLASSES.filter((c) => !customIds.has(c.id) && !deletedSet.has(c.id));
+        const activeCustom = customClasses.filter((c) => !deletedSet.has(c.id));
+        const all = [...filteredDefaults, ...activeCustom];
+        return all.sort((a, b) => (a.displayOrder || 99) - (b.displayOrder || 99));
+      },
+
+      addClass: async (cls: SchoolClass) => {
+        const cleanId = cls.id.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+        const formatted: SchoolClass = {
+          ...cls,
+          id: cleanId,
+          displayOrder: cls.displayOrder ?? 99,
+          icon: cls.icon || "🎓",
+          created_at: new Date().toISOString(),
+        };
+
+        set((state) => ({
+          customClasses: [
+            ...state.customClasses.filter((c) => c.id !== formatted.id),
+            formatted,
+          ],
+        }));
+
+        let cloudSynced = false;
+        let cloudError: string | undefined;
 
         try {
+          const { error } = await supabase.from("custom_classes").upsert({
+            id: formatted.id,
+            name: formatted.name,
+            description: formatted.description,
+            icon: formatted.icon,
+            display_order: formatted.displayOrder,
+          });
+
+          if (error) {
+            cloudError = error.message;
+          } else {
+            cloudSynced = true;
+          }
+        } catch (e: any) {
+          cloudError = e?.message;
+        }
+
+        return { success: true, cloudSynced, error: cloudError };
+      },
+
+      updateClass: async (classId: string, updatedData: Partial<SchoolClass>) => {
+        const allClasses = get().getAllClasses();
+        const existing = allClasses.find((c) => c.id === classId);
+        if (!existing) return { success: false, cloudSynced: false, error: "Class not found" };
+
+        const merged: SchoolClass = {
+          ...existing,
+          ...updatedData,
+          id: classId,
+        };
+
+        set((state) => ({
+          customClasses: [
+            ...state.customClasses.filter((c) => c.id !== classId),
+            merged,
+          ],
+        }));
+
+        let cloudSynced = false;
+        let cloudError: string | undefined;
+
+        try {
+          const { error } = await supabase.from("custom_classes").upsert({
+            id: merged.id,
+            name: merged.name,
+            description: merged.description,
+            icon: merged.icon,
+            display_order: merged.displayOrder,
+          });
+
+          if (error) {
+            cloudError = error.message;
+          } else {
+            cloudSynced = true;
+          }
+        } catch (e: any) {
+          cloudError = e?.message;
+        }
+
+        return { success: true, cloudSynced, error: cloudError };
+      },
+
+      deleteClass: async (classId: string) => {
+        set((state) => ({
+          deletedClassIds: Array.from(new Set([...(state.deletedClassIds || []), classId])),
+          customClasses: state.customClasses.filter((c) => c.id !== classId),
+        }));
+
+        try {
+          await supabase.from("custom_classes").delete().eq("id", classId);
+        } catch (e) {
+          console.warn("Supabase class delete error:", e);
+        }
+
+        return { success: true };
+      },
+
+      restoreClass: async (classId: string) => {
+        set((state) => ({
+          deletedClassIds: (state.deletedClassIds || []).filter((id) => id !== classId),
+        }));
+        return { success: true };
+      },
+
+      restoreAllDefaultClasses: () => {
+        set({ deletedClassIds: [] });
+      },
+
+      pushLocalToCloud: async () => {
+        const { customClasses, customSubjects, customStages } = get();
+        let classesCount = 0;
+        let subjectsCount = 0;
+        let stagesCount = 0;
+
+        try {
+          // Push custom classes
+          for (const cls of customClasses) {
+            const { error } = await supabase.from("custom_classes").upsert({
+              id: cls.id,
+              name: cls.name,
+              description: cls.description,
+              icon: cls.icon,
+              display_order: cls.displayOrder,
+            });
+            if (!error) classesCount++;
+          }
+
           // Push custom subjects
           for (const sub of customSubjects) {
             const { error } = await supabase.from("custom_subjects").upsert({
@@ -131,6 +278,7 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
               color: sub.color,
               badge_bg: sub.badgeBg,
               border_color: sub.borderColor,
+              grade: sub.grade || "grade_9",
             });
             if (!error) subjectsCount++;
           }
@@ -156,19 +304,26 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
           }
 
           set({ cloudSyncStatus: "connected", cloudSyncMessage: "All local data synced to Supabase" });
-          return { success: true, stagesSynced: stagesCount, subjectsSynced: subjectsCount };
+          return { success: true, stagesSynced: stagesCount, subjectsSynced: subjectsCount, classesSynced: classesCount };
         } catch (err: any) {
-          return { success: false, stagesSynced: stagesCount, subjectsSynced: subjectsCount, error: err?.message };
+          return { success: false, stagesSynced: stagesCount, subjectsSynced: subjectsCount, classesSynced: classesCount, error: err?.message };
         }
       },
 
-      getAllSubjects: () => {
+      getAllSubjects: (grade?: string) => {
         const { customSubjects, deletedSubjectIds = [] } = get();
         const deletedSet = new Set(deletedSubjectIds);
         const customIds = new Set(customSubjects.map((s) => s.id));
         const filteredDefaults = DEFAULT_SUBJECTS.filter((s) => !customIds.has(s.id) && !deletedSet.has(s.id));
         const activeCustom = customSubjects.filter((s) => !deletedSet.has(s.id));
-        return [...filteredDefaults, ...activeCustom];
+        const all = [...filteredDefaults, ...activeCustom].map((s) => ({
+          ...s,
+          grade: s.grade || "grade_9",
+        }));
+        if (grade) {
+          return all.filter((s) => s.grade === grade);
+        }
+        return all;
       },
 
       getAllStages: () => {
@@ -177,7 +332,10 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
         const customIds = new Set(customStages.map((s) => String(s.id)));
         const filteredDefaults = STAGES_DATA.filter((s) => !customIds.has(String(s.id)) && (!s.subject || !deletedSet.has(s.subject)));
         const activeCustom = customStages.filter((s) => !s.subject || !deletedSet.has(s.subject));
-        return [...filteredDefaults, ...activeCustom];
+        return [...filteredDefaults, ...activeCustom].map((stg) => ({
+          ...stg,
+          grade: stg.grade || "grade_9",
+        }));
       },
 
       addSubject: async (subject: CustomSubject) => {
@@ -185,6 +343,7 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
         const formatted: CustomSubject = {
           ...subject,
           id: cleanId,
+          grade: subject.grade || "grade_9",
           badgeBg: subject.badgeBg || `${subject.color}1a`,
           borderColor: subject.borderColor || `${subject.color}4d`,
           created_at: new Date().toISOString(),
@@ -211,6 +370,7 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
             color: formatted.color,
             badge_bg: formatted.badgeBg,
             border_color: formatted.borderColor,
+            grade: formatted.grade,
           });
 
           if (error) {
@@ -237,6 +397,7 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
           ...existing,
           ...updatedData,
           id: subjectId,
+          grade: updatedData.grade || existing.grade || "grade_9",
         };
 
         set((state) => ({
@@ -258,6 +419,7 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
             color: merged.color,
             badge_bg: merged.badgeBg,
             border_color: merged.borderColor,
+            grade: merged.grade,
           });
 
           if (error) {
@@ -418,6 +580,28 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
       syncWithSupabase: async () => {
         set({ isLoading: true });
         try {
+          // Fetch custom classes
+          try {
+            const { data: cloudClasses, error: classErr } = await supabase
+              .from("custom_classes")
+              .select("*")
+              .order("display_order", { ascending: true });
+
+            if (!classErr && cloudClasses) {
+              const mappedClasses: SchoolClass[] = cloudClasses.map((c: any) => ({
+                id: c.id,
+                name: c.name,
+                description: c.description || "",
+                icon: c.icon || "🎓",
+                displayOrder: c.display_order ?? 1,
+                created_at: c.created_at,
+              }));
+              set({ customClasses: mappedClasses });
+            }
+          } catch (e) {
+            console.warn("custom_classes sync check:", e);
+          }
+
           // Fetch custom subjects
           const { data: cloudSubjects, error: subErr } = await supabase
             .from("custom_subjects")
@@ -432,6 +616,7 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
               color: s.color || "#38bdf8",
               badgeBg: s.badge_bg,
               borderColor: s.border_color,
+              grade: s.grade || "grade_9",
             }));
             set({ customSubjects: mappedSubs });
           }
@@ -447,7 +632,7 @@ export const useCurriculumStore = create<CurriculumStoreState>()(
               subject: s.subject_id as SubjectType,
               subjectName: s.subject_name,
               subjectStageNumber: s.subject_stage_number,
-              grade: s.grade,
+              grade: s.grade || "grade_9",
               chapter: s.chapter,
               topic: s.topic,
               title: s.title,

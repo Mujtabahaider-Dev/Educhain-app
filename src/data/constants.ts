@@ -1,5 +1,36 @@
 import { ScholarRank, Achievement, LeaderboardScholar } from "@/types/user";
-import { GradeType, SubjectType, StreamDomain, StreamDomainId } from "@/types/curriculum";
+import { GradeType, SubjectType, StreamDomain, StreamDomainId, SchoolClass } from "@/types/curriculum";
+
+export const DEFAULT_CLASSES: SchoolClass[] = [
+  {
+    id: "grade_9",
+    name: "Class 9",
+    description: "SSC Part I (Secondary School Certificate)",
+    icon: "🌱",
+    displayOrder: 1,
+  },
+  {
+    id: "grade_10",
+    name: "Class 10",
+    description: "SSC Part II (Matriculation)",
+    icon: "⚡",
+    displayOrder: 2,
+  },
+  {
+    id: "grade_11",
+    name: "Class 11",
+    description: "HSSC Part I (1st Year College)",
+    icon: "🛡️",
+    displayOrder: 3,
+  },
+  {
+    id: "grade_12",
+    name: "Class 12",
+    description: "HSSC Part II (2nd Year College)",
+    icon: "👑",
+    displayOrder: 4,
+  },
+];
 
 export const RANKS: ScholarRank[] = [
   { level: 1, name: "Novice", minXp: 0, maxXp: 499, stages: "1–6", icon: "🌱" },

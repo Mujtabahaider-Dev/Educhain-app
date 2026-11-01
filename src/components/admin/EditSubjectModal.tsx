@@ -47,7 +47,10 @@ function EditSubjectForm({
   onSaved: (name: string) => void;
   updateSubject: any;
 }) {
+  const { getAllClasses } = useCurriculumStore();
+  const classes = getAllClasses();
   const [name, setName] = useState(subject.name || "");
+  const [grade, setGrade] = useState(subject.grade || "grade_9");
   const [icon, setIcon] = useState(subject.icon || "📚");
   const [description, setDescription] = useState(subject.description || "");
   const [color, setColor] = useState(subject.color || "#38bdf8");
@@ -65,6 +68,7 @@ function EditSubjectForm({
       icon: icon.trim() || "📚",
       description: description.trim(),
       color,
+      grade,
       badgeBg: `${color}1a`,
       borderColor: `${color}4d`,
     });
@@ -111,6 +115,23 @@ function EditSubjectForm({
 
         {/* Form */}
         <form onSubmit={handleSave} className="p-6 space-y-4">
+          <div>
+            <label className="block text-xs font-mono font-semibold uppercase mb-1">
+              Target Class / Grade
+            </label>
+            <select
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.03] text-xs font-semibold"
+            >
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.icon} {cls.name} {cls.description ? `— ${cls.description}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block text-xs font-mono font-semibold uppercase mb-1">
               Subject Name

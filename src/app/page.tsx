@@ -144,7 +144,8 @@ export default function Home() {
   // Filter stages by Grade and selected Subject (Merged from base + custom stages)
   const filteredStages = useMemo(() => {
     return allStages.filter((stage) => {
-      const matchesGrade = stage.grade === grade || (grade === "grade_9" && stage.grade === "grade_9");
+      const stageGrade = stage.grade || "grade_9";
+      const matchesGrade = stageGrade === grade;
       return matchesGrade && stage.subject === selectedSubject;
     });
   }, [allStages, grade, selectedSubject]);
@@ -248,7 +249,7 @@ export default function Home() {
 
                 {/* 2. Sleek Next Quest Hero & Dynamic Subject Selectors */}
                 <NextQuestHero
-                  stages={allStages.filter((s) => s.grade === grade || (grade === "grade_9" && s.grade === "grade_9"))}
+                  stages={allStages.filter((s) => (s.grade || "grade_9") === grade)}
                   selectedSubject={selectedSubject}
                   onSelectSubject={(sub) => setSelectedSubject(sub)}
                   onStartStage={(stage) => setSelectedStage(stage)}
@@ -256,7 +257,8 @@ export default function Home() {
 
                 {/* 3. Hierarchical Classification: Single Subject Header -> Chapter (e.g. Chapter One) -> Stages */}
                 <div className="space-y-12">
-                  {subjectGroups.map((group) => (
+                  {subjectGroups.length > 0 ? (
+                    subjectGroups.map((group) => (
                     <section key={group.subject} className="space-y-6">
                       
                       {/* Single, Clean Subject Header */}
@@ -328,7 +330,17 @@ export default function Home() {
                       </div>
 
                     </section>
-                  ))}
+                  ))
+                ) : (
+                  <div className="p-8 sm:p-12 rounded-3xl border border-dashed border-black/10 dark:border-white/10 bg-neutral-50/50 dark:bg-white/[0.01] text-center">
+                    <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 mb-1">
+                      No curriculum stages found for this subject
+                    </p>
+                    <p className="text-xs text-neutral-500 max-w-md mx-auto">
+                      Stages and questions for this track can be added via CSV or the MCQ builder in the Admin Panel.
+                    </p>
+                  </div>
+                )}
                 </div>
 
               </div>
